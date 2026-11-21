@@ -1,4 +1,4 @@
-import { verifyUser, getLarkToken, setCors } from './_lark.js';
+import { verifyUser, getLarkToken, setCors, errorStatus } from './_lark.js';
 
 export default async function handler(req, res) {
   setCors(res);
@@ -35,7 +35,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ success: false, error: `Unsupported action: ${action}` });
   } catch (err) {
     console.error('Action API error:', err);
-    return res.status(err.message.includes('Unauthorized') ? 401 : 500).json({
+    return res.status(errorStatus(err)).json({
       success: false,
       error: err.message,
     });

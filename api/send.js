@@ -1,4 +1,4 @@
-import { verifyUser, getLarkToken, setCors } from './_lark.js';
+import { verifyUser, getLarkToken, setCors, errorStatus } from './_lark.js';
 
 export default async function handler(req, res) {
   setCors(res);
@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { email } = await verifyUser(req);
+    const { email, displayName } = await verifyUser(req);
     const larkToken = await getLarkToken();
 
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
@@ -49,7 +49,7 @@ export default async function handler(req, res) {
 
     const payload = {
       head_from: {
-        name: 'Yug Rane',
+        name: displayName,
         mail_address: email,
       },
       to: toList,
@@ -80,7 +80,7 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error('Send API error:', err);
-    return res.status(err.message.includes('Unauthorized') ? 401 : 500).json({
+    return res.status(errorStatus(err)).json({
       success: false,
       error: err.message,
     });

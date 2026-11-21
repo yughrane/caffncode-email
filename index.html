@@ -1,1501 +1,195 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CaffnCode Mail // webmail</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mail · CaffnCode</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E📬%3C/text%3E%3C/svg%3E"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/mail-ui.js"></script>
   <style>
-    :root {
-      --espresso-950: #0a0806;
-      --espresso-900: #140f0c;
-      --espresso-850: #1b1511;
-      --espresso-800: #231c17;
-      --espresso-700: #332922;
-      --espresso-600: #4a3d34;
-      --espresso-border: rgba(224, 169, 109, 0.15);
-      --espresso-border-light: rgba(224, 169, 109, 0.28);
-      --caramel: #d4883b;
-      --caramel-light: #e0a96d;
-      --caramel-glow: rgba(212, 136, 59, 0.25);
-      --cream: #f7f4ee;
-      --cream-muted: #a69b91;
-      --cream-dim: #70675f;
-      --accent-red: #e05252;
-      --accent-green: #4caf50;
-      --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-      --font-mono: 'Space Mono', monospace;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      background-color: var(--espresso-950);
-      color: var(--cream);
-      font-family: var(--font-sans);
-      font-size: 14px;
-      line-height: 1.5;
-      height: 100vh;
-      width: 100vw;
-      overflow: hidden;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* Scrollbars */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: var(--espresso-950);
-    }
-    ::-webkit-scrollbar-thumb {
-      background: var(--espresso-700);
-      border-radius: 3px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: var(--caramel);
-    }
-
-    /* Auth Overlay */
-    #auth-view {
-      position: fixed;
-      inset: 0;
-      background: radial-gradient(circle at 50% 20%, #1f1712 0%, var(--espresso-950) 80%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      padding: 20px;
-    }
-
-    .auth-card {
-      width: 100%;
-      max-width: 420px;
-      background: var(--espresso-900);
-      border: 1px solid var(--espresso-border-light);
-      border-radius: 12px;
-      padding: 36px 32px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 40px var(--caramel-glow);
-    }
-
-    .auth-brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-
-    .auth-logo {
-      width: 42px;
-      height: 42px;
-      background: linear-gradient(135deg, var(--caramel), #8b4513);
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 20px;
-      color: #fff;
-      box-shadow: 0 4px 15px rgba(212, 136, 59, 0.4);
-    }
-
-    .auth-brand h1 {
-      font-size: 20px;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-      color: var(--cream);
-    }
-
-    .auth-brand p {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--caramel-light);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    .form-group {
-      margin-bottom: 18px;
-    }
-
-    .form-group label {
-      display: block;
-      font-family: var(--font-mono);
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--cream-muted);
-      margin-bottom: 6px;
-    }
-
-    .form-control {
-      width: 100%;
-      padding: 12px 14px;
-      background: var(--espresso-950);
-      border: 1px solid var(--espresso-border);
-      border-radius: 8px;
-      color: var(--cream);
-      font-family: var(--font-sans);
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-
-    .form-control:focus {
-      border-color: var(--caramel-light);
-      box-shadow: 0 0 0 3px var(--caramel-glow);
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 12px 18px;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 14px;
-      cursor: pointer;
-      transition: all 0.2s;
-      border: none;
-      text-decoration: none;
-    }
-
-    .btn-caramel {
-      background: linear-gradient(135deg, var(--caramel-light), var(--caramel));
-      color: var(--espresso-950);
-      width: 100%;
-      box-shadow: 0 4px 14px rgba(212, 136, 59, 0.3);
-    }
-
-    .btn-caramel:hover {
-      background: linear-gradient(135deg, #f0b87c, #e09244);
-      transform: translateY(-1px);
-      box-shadow: 0 6px 18px rgba(212, 136, 59, 0.45);
-    }
-
-    .auth-error {
-      background: rgba(224, 82, 82, 0.15);
-      border: 1px solid var(--accent-red);
-      color: #ff8585;
-      padding: 10px 14px;
-      border-radius: 6px;
-      font-size: 12px;
-      margin-bottom: 16px;
-      display: none;
-    }
-
-    /* Main App Layout */
-    #app-view {
-      display: flex;
-      height: 100vh;
-      width: 100vw;
-      background: var(--espresso-950);
-    }
-
-    /* 1. Sidebar */
-    .sidebar {
-      width: 260px;
-      min-width: 240px;
-      background: var(--espresso-900);
-      border-right: 1px solid var(--espresso-border);
-      display: flex;
-      flex-direction: column;
-      user-select: none;
-    }
-
-    .sidebar-header {
-      padding: 20px 18px 16px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      border-bottom: 1px solid var(--espresso-border);
-    }
-
-    .sidebar-logo {
-      width: 34px;
-      height: 34px;
-      background: linear-gradient(135deg, var(--caramel), #8b4513);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 16px;
-      color: #fff;
-    }
-
-    .sidebar-brand h2 {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--cream);
-      letter-spacing: -0.3px;
-    }
-
-    .sidebar-brand span {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      color: var(--caramel-light);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .compose-btn-wrap {
-      padding: 18px 16px 12px;
-    }
-
-    .btn-compose {
-      width: 100%;
-      background: linear-gradient(135deg, var(--caramel-light), var(--caramel));
-      color: var(--espresso-950);
-      padding: 12px 16px;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 13px;
-      letter-spacing: 0.3px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      border: none;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(212, 136, 59, 0.25);
-      transition: all 0.2s;
-    }
-
-    .btn-compose:hover {
-      filter: brightness(1.1);
-      transform: translateY(-1px);
-    }
-
-    .folders-list {
-      flex: 1;
-      padding: 8px 12px;
-      overflow-y: auto;
-    }
-
-    .folder-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 9px 12px;
-      border-radius: 6px;
-      color: var(--cream-muted);
-      cursor: pointer;
-      margin-bottom: 3px;
-      font-size: 13px;
-      font-weight: 500;
-      transition: background 0.15s, color 0.15s;
-    }
-
-    .folder-item:hover {
-      background: var(--espresso-800);
-      color: var(--cream);
-    }
-
-    .folder-item.active {
-      background: var(--espresso-800);
-      color: var(--caramel-light);
-      font-weight: 600;
-    }
-
-    .folder-name-wrap {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .folder-badge {
-      background: var(--espresso-700);
-      color: var(--caramel-light);
-      font-family: var(--font-mono);
-      font-size: 10px;
-      font-weight: 700;
-      padding: 2px 7px;
-      border-radius: 10px;
-    }
-
-    .folder-item.active .folder-badge {
-      background: var(--caramel);
-      color: var(--espresso-950);
-    }
-
-    .sidebar-user {
-      padding: 14px 16px;
-      border-top: 1px solid var(--espresso-border);
-      background: var(--espresso-850);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .user-info {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      overflow: hidden;
-    }
-
-    .user-avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: var(--espresso-700);
-      border: 1px solid var(--caramel-light);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      color: var(--caramel-light);
-      font-size: 12px;
-      flex-shrink: 0;
-    }
-
-    .user-details {
-      overflow: hidden;
-    }
-
-    .user-email {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--cream);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 135px;
-    }
-
-    .user-status {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      color: var(--accent-green);
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .user-status::before {
-      content: '';
-      width: 6px;
-      height: 6px;
-      background: var(--accent-green);
-      border-radius: 50%;
-      display: inline-block;
-    }
-
-    .btn-logout {
-      background: transparent;
-      border: none;
-      color: var(--cream-dim);
-      cursor: pointer;
-      padding: 6px;
-      border-radius: 4px;
-      transition: color 0.2s;
-    }
-
-    .btn-logout:hover {
-      color: var(--accent-red);
-    }
-
-    /* 2. Messages List Pane */
-    .list-pane {
-      width: 380px;
-      min-width: 320px;
-      background: var(--espresso-950);
-      border-right: 1px solid var(--espresso-border);
-      display: flex;
-      flex-direction: column;
-    }
-
-    .list-header {
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--espresso-border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .list-title {
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--cream);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .list-count {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--cream-muted);
-      background: var(--espresso-800);
-      padding: 2px 8px;
-      border-radius: 4px;
-    }
-
-    .btn-refresh {
-      background: var(--espresso-800);
-      border: 1px solid var(--espresso-border);
-      color: var(--cream-muted);
-      border-radius: 6px;
-      width: 32px;
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .btn-refresh:hover {
-      color: var(--caramel-light);
-      border-color: var(--caramel);
-    }
-
-    .btn-refresh.spinning svg {
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      100% { transform: rotate(360deg); }
-    }
-
-    .messages-container {
-      flex: 1;
-      overflow-y: auto;
-    }
-
-    .message-item {
-      padding: 14px 18px;
-      border-bottom: 1px solid rgba(224, 169, 109, 0.08);
-      cursor: pointer;
-      transition: background 0.15s;
-      position: relative;
-    }
-
-    .message-item:hover {
-      background: var(--espresso-900);
-    }
-
-    .message-item.active {
-      background: var(--espresso-850);
-      border-left: 3px solid var(--caramel);
-    }
-
-    .message-item.unread .msg-subject {
-      font-weight: 700;
-      color: #fff;
-    }
-
-    .message-item.unread .msg-from {
-      font-weight: 700;
-      color: var(--caramel-light);
-    }
-
-    .msg-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 4px;
-    }
-
-    .msg-from-wrap {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      max-width: 75%;
-    }
-
-    .msg-unread-dot {
-      width: 7px;
-      height: 7px;
-      background: var(--caramel);
-      border-radius: 50%;
-      flex-shrink: 0;
-      display: none;
-    }
-
-    .message-item.unread .msg-unread-dot {
-      display: inline-block;
-    }
-
-    .msg-from {
-      font-size: 13px;
-      color: var(--cream);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .msg-date {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--cream-dim);
-      white-space: nowrap;
-    }
-
-    .msg-subject {
-      font-size: 13px;
-      color: var(--cream-muted);
-      margin-bottom: 5px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .msg-snippet {
-      font-size: 12px;
-      color: var(--cream-dim);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      line-height: 1.4;
-    }
-
-    .empty-state {
-      padding: 60px 20px;
-      text-align: center;
-      color: var(--cream-dim);
-    }
-
-    .empty-state svg {
-      margin-bottom: 12px;
-      opacity: 0.4;
-    }
-
-    /* 3. Message View Pane */
-    .view-pane {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      background: var(--espresso-950);
-      position: relative;
-    }
-
-    .view-empty {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: var(--cream-dim);
-      user-select: none;
-    }
-
-    .view-empty svg {
-      opacity: 0.25;
-      margin-bottom: 16px;
-    }
-
-    .view-content {
-      display: none;
-      flex-direction: column;
-      height: 100%;
-    }
-
-    .view-header {
-      padding: 22px 28px 18px;
-      border-bottom: 1px solid var(--espresso-border);
-      background: var(--espresso-900);
-    }
-
-    .view-subject-row {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 16px;
-    }
-
-    .view-subject {
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--cream);
-      letter-spacing: -0.3px;
-      line-height: 1.3;
-    }
-
-    .view-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-shrink: 0;
-    }
-
-    .action-btn {
-      background: var(--espresso-800);
-      border: 1px solid var(--espresso-border);
-      color: var(--cream-muted);
-      border-radius: 6px;
-      padding: 7px 12px;
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      transition: all 0.2s;
-    }
-
-    .action-btn:hover {
-      color: var(--caramel-light);
-      border-color: var(--caramel);
-    }
-
-    .action-btn.btn-danger:hover {
-      color: var(--accent-red);
-      border-color: var(--accent-red);
-    }
-
-    .view-meta {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .sender-info {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .sender-avatar {
-      width: 40px;
-      height: 40px;
-      background: var(--espresso-700);
-      border: 1px solid var(--caramel);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      color: var(--caramel-light);
-      font-size: 15px;
-    }
-
-    .sender-details {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .sender-name {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--cream);
-    }
-
-    .sender-email {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--cream-muted);
-    }
-
-    .sender-to {
-      font-size: 11px;
-      color: var(--cream-dim);
-    }
-
-    .view-date {
-      font-family: var(--font-mono);
-      font-size: 12px;
-      color: var(--cream-muted);
-    }
-
-    .view-body {
-      flex: 1;
-      padding: 24px;
-      overflow: hidden;
-      background: #ffffff;
-      margin: 16px;
-      border-radius: 8px;
-      border: 1px solid var(--espresso-border);
-      display: flex;
-      flex-direction: column;
-    }
-
-    #email-frame {
-      width: 100%;
-      height: 100%;
-      border: none;
-      background: #ffffff;
-    }
-
-    /* Compose Modal */
-    #compose-modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(10, 8, 6, 0.75);
-      backdrop-filter: blur(4px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 500;
-      padding: 20px;
-    }
-
-    .compose-card {
-      width: 100%;
-      max-width: 680px;
-      height: 80vh;
-      max-height: 700px;
-      background: var(--espresso-900);
-      border: 1px solid var(--espresso-border-light);
-      border-radius: 12px;
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 40px var(--caramel-glow);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .compose-header {
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--espresso-border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: var(--espresso-850);
-    }
-
-    .compose-title {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--cream);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .compose-close {
-      background: transparent;
-      border: none;
-      color: var(--cream-dim);
-      cursor: pointer;
-      padding: 4px;
-      transition: color 0.2s;
-    }
-
-    .compose-close:hover {
-      color: var(--cream);
-    }
-
-    .compose-form {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow-y: auto;
-    }
-
-    .compose-field {
-      padding: 12px 20px;
-      border-bottom: 1px solid rgba(224, 169, 109, 0.08);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .compose-field label {
-      width: 60px;
-      font-family: var(--font-mono);
-      font-size: 11px;
-      text-transform: uppercase;
-      color: var(--cream-muted);
-      flex-shrink: 0;
-    }
-
-    .compose-field input {
-      flex: 1;
-      background: transparent;
-      border: none;
-      color: var(--cream);
-      font-family: var(--font-sans);
-      font-size: 14px;
-      outline: none;
-    }
-
-    .compose-body-wrap {
-      flex: 1;
-      padding: 18px 20px;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .compose-textarea {
-      flex: 1;
-      width: 100%;
-      background: transparent;
-      border: none;
-      color: var(--cream);
-      font-family: var(--font-sans);
-      font-size: 14px;
-      line-height: 1.6;
-      resize: none;
-      outline: none;
-    }
-
-    .compose-footer {
-      padding: 14px 20px;
-      border-top: 1px solid var(--espresso-border);
-      background: var(--espresso-850);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .btn-send {
-      background: linear-gradient(135deg, var(--caramel-light), var(--caramel));
-      color: var(--espresso-950);
-      padding: 9px 20px;
-      border-radius: 6px;
-      font-weight: 600;
-      font-size: 13px;
-      border: none;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      box-shadow: 0 4px 12px rgba(212, 136, 59, 0.3);
-      transition: all 0.2s;
-    }
-
-    .btn-send:hover {
-      filter: brightness(1.1);
-    }
-
-    .btn-discard {
-      background: transparent;
-      border: none;
-      color: var(--cream-dim);
-      font-size: 13px;
-      cursor: pointer;
-      padding: 6px 12px;
-      transition: color 0.2s;
-    }
-
-    .btn-discard:hover {
-      color: var(--accent-red);
-    }
-
-    /* Toast Notification */
-    #toast {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      background: var(--espresso-800);
-      border: 1px solid var(--caramel);
-      color: var(--cream);
-      padding: 12px 20px;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 500;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-      transform: translateY(100px);
-      opacity: 0;
-      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-      z-index: 9999;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    #toast.show {
-      transform: translateY(0);
-      opacity: 1;
-    }
-
-    /* SVG Icon styles */
-    .icon {
-      width: 16px;
-      height: 16px;
-      stroke: currentColor;
-      stroke-width: 2;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      fill: none;
-    }
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+    :root{
+      --cream:#fdf6f0;--espresso:#2c1a0e;--caramel:#c87941;
+      --latte:#e8c9a0;--foam:#f5ede3;--steam:#d4a574;
+      --dark-roast:#1a0f07;--mocha:#6b3d1e;
+      --green:#2d6a4f;--green-lt:#d8f3dc;
+      --red:#8b1a1a;--red-lt:#fde8e8;
+    }
+    html,body{height:100%}
+    body{background:var(--cream);font-family:'Space Mono',monospace;color:var(--espresso);min-height:100vh}
+    body::after{
+      content:'';position:fixed;inset:0;
+      background-image:linear-gradient(var(--latte) 1px,transparent 1px),linear-gradient(90deg,var(--latte) 1px,transparent 1px);
+      background-size:32px 32px;opacity:0.15;pointer-events:none;z-index:0;
+    }
+
+    /* NAV */
+    nav{
+      position:sticky;top:0;z-index:200;background:var(--espresso);border-bottom:3px solid var(--caramel);
+      padding:0 2rem;height:56px;display:flex;align-items:center;justify-content:space-between;
+    }
+    .nav-icon{display:inline-block;flex-shrink:0;vertical-align:middle;box-shadow:2px 2px 0 rgba(255,255,255,0.2)}
+    .nav-logo{font-family:'Outfit',sans-serif;font-weight:800;font-size:1.05rem;letter-spacing:-0.03em;color:var(--cream);display:flex;align-items:center;gap:8px}
+    .nav-badge{font-size:0.55rem;text-transform:uppercase;letter-spacing:0.12em;background:var(--caramel);color:var(--espresso);padding:2px 8px;box-shadow:2px 2px 0 rgba(0,0,0,0.2);font-weight:700}
+    .nav-right{display:flex;align-items:center;gap:12px}
+    .nav-user{font-size:0.68rem;color:var(--steam);letter-spacing:0.05em}
+    .nav-user strong{color:var(--caramel)}
+    .nav-link{font-size:0.6rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--latte);text-decoration:none;border:1.5px solid rgba(255,255,255,0.2);padding:5px 10px;transition:all .15s}
+    .nav-link:hover{border-color:var(--caramel);color:var(--caramel)}
+    .btn-logout{background:transparent;border:1.5px solid rgba(255,255,255,0.2);color:var(--steam);font-family:'Space Mono',monospace;font-size:0.6rem;text-transform:uppercase;letter-spacing:0.1em;padding:5px 10px;cursor:pointer;transition:all 0.15s}
+    .btn-logout:hover{border-color:var(--caramel);color:var(--caramel)}
+    @media(max-width:700px){
+      nav{padding:0 1rem}
+      .nav-user,.nav-link{display:none}
+    }
+
+    .mail-wrap{position:relative;z-index:1;height:calc(100vh - 56px);padding:1.2rem}
+    @media(max-width:700px){.mail-wrap{padding:.5rem}}
+
+    /* LOGIN */
+    .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;z-index:1;padding:2rem}
+    .login-card{background:var(--foam);border:2px solid var(--espresso);padding:2.5rem;width:100%;max-width:400px;box-shadow:8px 8px 0 var(--caramel);position:relative}
+    .login-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:repeating-linear-gradient(90deg,var(--caramel) 0,var(--caramel) 6px,var(--espresso) 6px,var(--espresso) 9px)}
+    .login-logo{font-family:'Outfit',sans-serif;font-weight:900;font-size:1.4rem;letter-spacing:-0.03em;margin-bottom:0.2rem;display:flex;align-items:center;gap:8px}
+    .login-logo .pixel{width:10px;height:10px;background:var(--caramel);box-shadow:3px 3px 0 var(--espresso);display:inline-block}
+    .login-sub{font-size:0.68rem;color:var(--mocha);margin-bottom:2rem}
+    .field{display:flex;flex-direction:column;gap:6px;margin-bottom:1rem}
+    .field label{font-size:0.6rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--mocha);font-weight:700}
+    .field input{border:2px solid var(--espresso);background:var(--cream);padding:9px 12px;font-family:'Space Mono',monospace;font-size:0.78rem;color:var(--espresso);outline:none;transition:border-color 0.15s}
+    .field input:focus{border-color:var(--caramel)}
+    .btn-primary{background:var(--espresso);color:var(--cream);border:none;padding:10px 20px;font-family:'Space Mono',monospace;font-weight:700;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.1em;box-shadow:4px 4px 0 var(--caramel);cursor:pointer;transition:all 0.12s;display:inline-flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:1rem}
+    .btn-primary:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 var(--caramel)}
+    .btn-primary:disabled{opacity:0.5;transform:none;box-shadow:none;cursor:not-allowed}
+    .error-box{background:var(--red-lt);border:2px solid var(--red);padding:10px 14px;font-size:0.72rem;color:var(--red);margin-bottom:1rem;display:none}
+    .error-box.show{display:block}
+    .login-foot{font-size:0.6rem;color:var(--steam);margin-top:1.2rem;line-height:1.7}
+    .login-foot a{color:var(--caramel)}
+    .spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(253,246,240,0.3);border-top-color:var(--cream);border-radius:50%;animation:spin 0.7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
   </style>
 </head>
 <body>
 
-  <!-- AUTH SCREEN -->
-  <div id="auth-view">
-    <div class="auth-card">
-      <div class="auth-brand">
-        <div class="auth-logo">☕</div>
-        <div>
-          <h1>caffncode // mail</h1>
-          <p>enterprise single sign-on</p>
-        </div>
-      </div>
+<!-- LOGIN -->
+<div id="login-screen" style="display:none">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-logo"><span class="pixel"></span> caffncode mail</div>
+      <div class="login-sub">Single sign-on · same account as the admin panel</div>
 
-      <div id="auth-error" class="auth-error"></div>
-
-      <form id="auth-form" onsubmit="handleLogin(event)">
-        <div class="form-group">
-          <label for="auth-email">Email Address</label>
-          <input type="email" id="auth-email" class="form-control" placeholder="name@caffncode.com" required autocomplete="username">
+      <form onsubmit="login(event)">
+        <div class="field">
+          <label for="login-username">Email or Username</label>
+          <input type="text" id="login-username" placeholder="email or username" autocomplete="username" required/>
         </div>
-        <div class="form-group">
-          <label for="auth-password">Password</label>
-          <input type="password" id="auth-password" class="form-control" placeholder="••••••••••••" required autocomplete="current-password">
+        <div class="field">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" required/>
         </div>
-        <button type="submit" id="btn-login-submit" class="btn btn-caramel">
-          Sign In to CaffnCode Mail
-        </button>
+        <div id="login-error" class="error-box"></div>
+        <button class="btn-primary" id="login-btn" type="submit">Sign in ↗</button>
       </form>
+      <div class="login-foot">Forgot your password? Ask a super admin to reset it from <a href="https://admin.caffncode.com">admin.caffncode.com</a>.</div>
     </div>
   </div>
+</div>
 
-  <!-- MAIN APP SCREEN -->
-  <div id="app-view">
-    <!-- 1. Left Sidebar -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <div class="sidebar-logo">☕</div>
-        <div class="sidebar-brand">
-          <h2>caffncode</h2>
-          <span>webmail client</span>
-        </div>
-      </div>
-
-      <div class="compose-btn-wrap">
-        <button class="btn-compose" onclick="openCompose()">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-          Compose
-        </button>
-      </div>
-
-      <nav class="folders-list" id="folders-nav">
-        <div class="folder-item active" data-folder="INBOX" onclick="switchFolder('INBOX')">
-          <div class="folder-name-wrap">
-            <svg class="icon" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2v7a2 2 0 002 2h16a2 2 0 002-2v-7z"/><path d="M5.45 5.11L2 12v7a2 2 0 002 2h16a2 2 0 002-2v-7l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>
-            <span>Inbox</span>
-          </div>
-          <span class="folder-badge" id="badge-INBOX">0</span>
-        </div>
-        <div class="folder-item" data-folder="SENT" onclick="switchFolder('SENT')">
-          <div class="folder-name-wrap">
-            <svg class="icon" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            <span>Sent</span>
-          </div>
-        </div>
-        <div class="folder-item" data-folder="DRAFT" onclick="switchFolder('DRAFT')">
-          <div class="folder-name-wrap">
-            <svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            <span>Drafts</span>
-          </div>
-        </div>
-        <div class="folder-item" data-folder="SPAM" onclick="switchFolder('SPAM')">
-          <div class="folder-name-wrap">
-            <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            <span>Spam</span>
-          </div>
-        </div>
-        <div class="folder-item" data-folder="TRASH" onclick="switchFolder('TRASH')">
-          <div class="folder-name-wrap">
-            <svg class="icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
-            <span>Trash</span>
-          </div>
-        </div>
-      </nav>
-
-      <div class="sidebar-user">
-        <div class="user-info">
-          <div class="user-avatar" id="current-user-avatar">?</div>
-          <div class="user-details">
-            <div class="user-email" id="current-user-email">Loading...</div>
-            <div class="user-status">online</div>
-          </div>
-        </div>
-        <button class="btn-logout" title="Sign Out" onclick="handleLogout()">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        </button>
-      </div>
-    </aside>
-
-    <!-- 2. Messages List Pane -->
-    <section class="list-pane">
-      <div class="list-header">
-        <div class="list-title">
-          <span id="active-folder-title">Inbox</span>
-          <span class="list-count" id="active-folder-count">0</span>
-        </div>
-        <button class="btn-refresh" id="btn-refresh" title="Refresh messages" onclick="loadMessages()">
-          <svg class="icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
-        </button>
-      </div>
-
-      <div class="messages-container" id="messages-list">
-        <div class="empty-state">Loading messages...</div>
-      </div>
-    </section>
-
-    <!-- 3. Message View Pane -->
-    <main class="view-pane">
-      <div class="view-empty" id="view-empty">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-        <p>Select a message from the list to preview</p>
-      </div>
-
-      <div class="view-content" id="view-content">
-        <div class="view-header">
-          <div class="view-subject-row">
-            <h1 class="view-subject" id="view-subject">Subject</h1>
-            <div class="view-actions">
-              <button class="action-btn" title="Reply" onclick="replyCurrentMessage()">
-                <svg class="icon" viewBox="0 0 24 24"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 00-4-4H4"/></svg>
-                Reply
-              </button>
-              <button class="action-btn" title="Forward" onclick="forwardCurrentMessage()">
-                <svg class="icon" viewBox="0 0 24 24"><polyline points="15 17 20 12 15 7"/><path d="M4 18v-2a4 4 0 014-4h12"/></svg>
-                Forward
-              </button>
-              <button class="action-btn btn-danger" title="Delete" onclick="deleteCurrentMessage()">
-                <svg class="icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
-                Delete
-              </button>
-            </div>
-          </div>
-
-          <div class="view-meta">
-            <div class="sender-info">
-              <div class="sender-avatar" id="view-avatar">?</div>
-              <div class="sender-details">
-                <span class="sender-name" id="view-sender-name">Sender Name</span>
-                <span class="sender-email" id="view-sender-email">sender@example.com</span>
-                <span class="sender-to" id="view-to">to: me</span>
-              </div>
-            </div>
-            <div class="view-date" id="view-date">Date</div>
-          </div>
-        </div>
-
-        <div class="view-body">
-          <iframe id="email-frame" sandbox="allow-same-origin allow-popups"></iframe>
-        </div>
-      </div>
-    </main>
-  </div>
-
-  <!-- COMPOSE MODAL -->
-  <div id="compose-modal">
-    <div class="compose-card">
-      <div class="compose-header">
-        <div class="compose-title">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          New Message
-        </div>
-        <button class="compose-close" onclick="closeCompose()">
-          <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-
-      <form class="compose-form" onsubmit="handleSend(event)">
-        <div class="compose-field">
-          <label>From</label>
-          <input type="text" id="compose-from" value="" readonly style="opacity: 0.7;">
-        </div>
-        <div class="compose-field">
-          <label>To</label>
-          <input type="email" id="compose-to" placeholder="recipient@example.com" required multiple>
-        </div>
-        <div class="compose-field">
-          <label>Subject</label>
-          <input type="text" id="compose-subject" placeholder="Subject" required>
-        </div>
-        <div class="compose-body-wrap">
-          <textarea id="compose-body" class="compose-textarea" placeholder="Write your email here..."></textarea>
-        </div>
-
-        <div class="compose-footer">
-          <button type="button" class="btn-discard" onclick="closeCompose()">Discard</button>
-          <button type="submit" id="btn-send-submit" class="btn-send">
-            <svg class="icon" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            Send Message
-          </button>
-        </div>
-      </form>
+<!-- APP -->
+<div id="mail-app" style="display:none">
+  <nav>
+    <div class="nav-logo">
+      <svg class="nav-icon" width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect width="28" height="28" fill="#c87941"/>
+        <rect x="2" y="2" width="24" height="24" fill="#fdf6f0"/>
+        <rect x="7" y="12" width="11" height="9" fill="#c87941"/>
+        <rect x="8" y="13" width="9" height="7" fill="#2c1a0e"/>
+        <rect x="8" y="13" width="9" height="2.5" fill="#4a2c14" opacity="0.5"/>
+        <rect x="18" y="14" width="2.5" height="4" rx="0.5" fill="#c87941"/>
+        <rect x="6" y="21" width="13" height="1.5" fill="#c87941"/>
+        <rect x="5" y="22.5" width="15" height="1.5" fill="#a06030"/>
+        <rect x="10" y="8" width="1" height="4" fill="#c87941" opacity="0.5"/>
+        <rect x="13.5" y="6.5" width="1" height="5" fill="#c87941" opacity="0.5"/>
+        <rect x="17" y="8" width="1" height="4" fill="#c87941" opacity="0.5"/>
+      </svg>
+      caffncode
+      <span class="nav-badge">mail</span>
     </div>
-  </div>
+    <div class="nav-right">
+      <span class="nav-user">Signed in as <strong id="nav-username">—</strong></span>
+      <a class="nav-link" href="https://admin.caffncode.com">Admin ↗</a>
+      <button class="btn-logout" onclick="logout()">Sign out</button>
+    </div>
+  </nav>
+  <div class="mail-wrap"><div id="mail-root" style="height:100%"></div></div>
+</div>
 
-  <div id="toast"></div>
+<script>
+  const SUPABASE_URL = 'https://qjcnqslvoseyaabjjvkn.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_01TSfCXJMwGFVt2PxJQvSA_n8eL2zn7';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  let mailApp = null;
 
-  <script>
-    const SUPABASE_URL = 'https://qjcnqslvoseyaabjjvkn.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_01TSfCXJMwGFVt2PxJQvSA_n8eL2zn7';
-    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  async function getToken() {
+    const { data: { session } } = await sb.auth.getSession();
+    return session?.access_token || '';
+  }
 
-    let currentSession = null;
-    let currentFolder = 'INBOX';
-    let currentMessageId = null;
-    let messagesCache = [];
-    let currentMessageData = null;
+  function showLogin() {
+    document.getElementById('login-screen').style.display = 'block';
+    document.getElementById('mail-app').style.display = 'none';
+    if (mailApp) { mailApp.destroy(); mailApp = null; }
+  }
 
-    // Toast helper
-    function showToast(msg, duration = 3000) {
-      const toast = document.getElementById('toast');
-      toast.textContent = msg;
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), duration);
+  async function showApp(session) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('mail-app').style.display = 'block';
+    let name = session.user.email;
+    try {
+      const { data } = await sb.from('profiles').select('display_name,username').eq('id', session.user.id).maybeSingle();
+      name = data?.display_name || data?.username || name;
+    } catch {}
+    document.getElementById('nav-username').textContent = name;
+    if (!mailApp) mailApp = CaffnMail.mount(document.getElementById('mail-root'), { apiBase: '', getToken });
+  }
+
+  async function login(e) {
+    e.preventDefault();
+    const btn = document.getElementById('login-btn');
+    const err = document.getElementById('login-error');
+    err.classList.remove('show');
+    let email = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value;
+    if (!email.includes('@')) email = `${email}@caffncode.com`;
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Signing in…';
+    try {
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      await showApp(data.session);
+    } catch (ex) {
+      err.textContent = '⚠ ' + (ex.message || 'Login failed');
+      err.classList.add('show');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Sign in ↗';
     }
+  }
 
-    // Initialize Auth & App
-    window.addEventListener('load', async () => {
-      try {
-        sb.auth.onAuthStateChange((event, session) => {
-          if (session) {
-            setupAuthenticatedSession(session);
-          }
-        });
+  async function logout() {
+    await sb.auth.signOut();
+    showLogin();
+  }
 
-        const { data: { session } } = await sb.auth.getSession();
-        if (session) {
-          setupAuthenticatedSession(session);
-        } else {
-          showAuthView();
-        }
-      } catch (err) {
-        console.error('Session error:', err);
-        showAuthView();
-      }
-    });
-
-    function showAuthView() {
-      document.getElementById('auth-view').style.display = 'flex';
-      document.getElementById('app-view').style.display = 'none';
-    }
-
-    function setupAuthenticatedSession(session) {
-      currentSession = session;
-      document.getElementById('auth-view').style.display = 'none';
-      document.getElementById('app-view').style.display = 'flex';
-
-      const userEmail = session.user?.email || '';
-      const displayEmail = userEmail.endsWith('@caffncode.com') ? userEmail : 'yug@caffncode.com';
-      document.getElementById('current-user-email').textContent = displayEmail;
-      document.getElementById('current-user-avatar').textContent = displayEmail.charAt(0).toUpperCase();
-      document.getElementById('compose-from').value = displayEmail;
-
-      loadFolders();
-      loadMessages();
-    }
-
-    async function handleLogin(e) {
-      e.preventDefault();
-      const email = document.getElementById('auth-email').value.trim();
-      const password = document.getElementById('auth-password').value;
-      const submitBtn = document.getElementById('btn-login-submit');
-      const errEl = document.getElementById('auth-error');
-
-      errEl.style.display = 'none';
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Authenticating...';
-
-      try {
-        const { data, error } = await sb.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        if (data.session) {
-          setupAuthenticatedSession(data.session);
-        }
-      } catch (err) {
-        errEl.textContent = err.message || 'Login failed. Please check credentials.';
-        errEl.style.display = 'block';
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Sign In to CaffnCode Mail';
-      }
-    }
-
-    async function handleLogout() {
-      await sb.auth.signOut();
-      currentSession = null;
-      showAuthView();
-    }
-
-    // API Helper with Supabase Auth Header
-    async function apiFetch(path, options = {}) {
-      if (!currentSession?.access_token) {
-        const { data: { session } } = await sb.auth.getSession();
-        if (!session) {
-          handleLogout();
-          throw new Error('Unauthenticated');
-        }
-        currentSession = session;
-      }
-
-      const headers = {
-        'Authorization': `Bearer ${currentSession.access_token}`,
-        'Content-Type': 'application/json',
-        ...(options.headers || {})
-      };
-
-      const res = await fetch(path, { ...options, headers });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'API Request Failed');
-      }
-      return data;
-    }
-
-    // Folders
-    async function loadFolders() {
-      try {
-        const res = await apiFetch('/api/folders');
-        if (res.folders) {
-          res.folders.forEach(f => {
-            const badge = document.getElementById(`badge-${f.id}`);
-            if (badge) {
-              badge.textContent = f.unreadCount || 0;
-              badge.style.display = f.unreadCount > 0 ? 'inline-block' : 'none';
-            }
-          });
-        }
-      } catch (err) {
-        console.warn('Load folders warning:', err);
-      }
-    }
-
-    function switchFolder(folderId) {
-      if (currentFolder === folderId) return;
-      currentFolder = folderId;
-      document.querySelectorAll('.folder-item').forEach(el => {
-        el.classList.toggle('active', el.dataset.folder === folderId);
-      });
-      document.getElementById('active-folder-title').textContent = folderId.charAt(0) + folderId.slice(1).toLowerCase();
-      
-      // Reset view pane
-      document.getElementById('view-content').style.display = 'none';
-      document.getElementById('view-empty').style.display = 'flex';
-      currentMessageId = null;
-
-      loadMessages();
-    }
-
-    // Messages List
-    async function loadMessages() {
-      const listEl = document.getElementById('messages-list');
-      const countEl = document.getElementById('active-folder-count');
-      const refreshBtn = document.getElementById('btn-refresh');
-
-      refreshBtn.classList.add('spinning');
-      listEl.innerHTML = '<div class="empty-state">Loading messages...</div>';
-
-      try {
-        const data = await apiFetch(`/api/inbox?folder=${encodeURIComponent(currentFolder)}`);
-        messagesCache = data.messages || [];
-        countEl.textContent = messagesCache.length;
-
-        if (messagesCache.length === 0) {
-          listEl.innerHTML = '<div class="empty-state">No messages in this folder</div>';
-          return;
-        }
-
-        listEl.innerHTML = messagesCache.map(m => {
-          const fromName = m.from?.name || m.from?.email || 'Unknown';
-          const dateStr = formatDate(m.date);
-          const activeClass = m.id === currentMessageId ? ' active' : '';
-          const unreadClass = m.unread ? ' unread' : '';
-
-          return `
-            <div class="message-item${activeClass}${unreadClass}" id="msg-${m.id}" onclick="selectMessage('${m.id}')">
-              <div class="msg-top">
-                <div class="msg-from-wrap">
-                  <span class="msg-unread-dot"></span>
-                  <span class="msg-from">${escapeHtml(fromName)}</span>
-                </div>
-                <span class="msg-date">${dateStr}</span>
-              </div>
-              <div class="msg-subject">${escapeHtml(m.subject || '(no subject)')}</div>
-              <div class="msg-snippet">${escapeHtml(m.snippet || '')}</div>
-            </div>
-          `;
-        }).join('');
-
-      } catch (err) {
-        listEl.innerHTML = `<div class="empty-state" style="color: var(--accent-red)">Error: ${escapeHtml(err.message)}</div>`;
-      } finally {
-        refreshBtn.classList.remove('spinning');
-      }
-    }
-
-    // Message Detail View
-    async function selectMessage(id) {
-      currentMessageId = id;
-
-      document.querySelectorAll('.message-item').forEach(el => el.classList.remove('active'));
-      const activeItem = document.getElementById(`msg-${id}`);
-      if (activeItem) {
-        activeItem.classList.add('active');
-        activeItem.classList.remove('unread');
-      }
-
-      document.getElementById('view-empty').style.display = 'none';
-      const contentEl = document.getElementById('view-content');
-      contentEl.style.display = 'flex';
-
-      const frame = document.getElementById('email-frame');
-      frame.srcdoc = '<p style="font-family: sans-serif; color: #666; padding: 20px;">Loading email content...</p>';
-
-      try {
-        const data = await apiFetch(`/api/message?id=${encodeURIComponent(id)}`);
-        const msg = data.message;
-        currentMessageData = msg;
-
-        document.getElementById('view-subject').textContent = msg.subject;
-        document.getElementById('view-sender-name').textContent = msg.from?.name || msg.from?.email || 'Unknown';
-        document.getElementById('view-sender-email').textContent = msg.from?.email || '';
-        document.getElementById('view-avatar').textContent = (msg.from?.name || msg.from?.email || '?').charAt(0).toUpperCase();
-        
-        const toList = (msg.to || []).map(t => t.name ? `${t.name} <${t.email}>` : t.email).join(', ');
-        document.getElementById('view-to').textContent = `to: ${toList || 'me'}`;
-        document.getElementById('view-date').textContent = new Date(msg.date).toLocaleString([], {
-          dateStyle: 'medium',
-          timeStyle: 'short'
-        });
-
-        // Load content into sandboxed frame
-        let docContent = msg.html;
-        if (!docContent || !docContent.trim()) {
-          docContent = `<pre style="font-family: inherit; font-size: 14px; white-space: pre-wrap; word-break: break-word;">${escapeHtml(msg.plainText || '')}</pre>`;
-        }
-        frame.srcdoc = `
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <meta charset="utf-8">
-              <style>
-                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #1a1a1a; margin: 12px; }
-                a { color: #d4883b; }
-                img { max-width: 100%; height: auto; }
-              </style>
-            </head>
-            <body>${docContent}</body>
-          </html>
-        `;
-
-      } catch (err) {
-        frame.srcdoc = `<p style="color: red; padding: 20px;">Failed to load message: ${escapeHtml(err.message)}</p>`;
-      }
-    }
-
-    // Actions
-    async function deleteCurrentMessage() {
-      if (!currentMessageId) return;
-      if (!confirm('Are you sure you want to delete this message?')) return;
-
-      try {
-        await apiFetch(`/api/action?action=delete&id=${encodeURIComponent(currentMessageId)}`, {
-          method: 'POST'
-        });
-        showToast('Message deleted');
-        document.getElementById('view-content').style.display = 'none';
-        document.getElementById('view-empty').style.display = 'flex';
-        currentMessageId = null;
-        loadMessages();
-        loadFolders();
-      } catch (err) {
-        showToast(`Delete failed: ${err.message}`);
-      }
-    }
-
-    function replyCurrentMessage() {
-      if (!currentMessageData) return;
-      openCompose();
-      document.getElementById('compose-to').value = currentMessageData.from?.email || '';
-      document.getElementById('compose-subject').value = currentMessageData.subject?.startsWith('Re:') 
-        ? currentMessageData.subject 
-        : `Re: ${currentMessageData.subject || ''}`;
-      document.getElementById('compose-body').value = `\n\n--- On ${new Date(currentMessageData.date).toLocaleString()}, ${currentMessageData.from?.name || currentMessageData.from?.email} wrote: ---\n${currentMessageData.plainText || ''}`;
-    }
-
-    function forwardCurrentMessage() {
-      if (!currentMessageData) return;
-      openCompose();
-      document.getElementById('compose-to').value = '';
-      document.getElementById('compose-subject').value = currentMessageData.subject?.startsWith('Fwd:') 
-        ? currentMessageData.subject 
-        : `Fwd: ${currentMessageData.subject || ''}`;
-      document.getElementById('compose-body').value = `\n\n--- Forwarded Message ---\nFrom: ${currentMessageData.from?.name || ''} <${currentMessageData.from?.email || ''}>\nDate: ${new Date(currentMessageData.date).toLocaleString()}\nSubject: ${currentMessageData.subject}\n\n${currentMessageData.plainText || ''}`;
-    }
-
-    // Compose
-    function openCompose() {
-      document.getElementById('compose-modal').style.display = 'flex';
-      document.getElementById('compose-to').focus();
-    }
-
-    function closeCompose() {
-      document.getElementById('compose-modal').style.display = 'none';
-      document.getElementById('compose-to').value = '';
-      document.getElementById('compose-subject').value = '';
-      document.getElementById('compose-body').value = '';
-    }
-
-    async function handleSend(e) {
-      e.preventDefault();
-      const to = document.getElementById('compose-to').value.trim();
-      const subject = document.getElementById('compose-subject').value.trim();
-      const text = document.getElementById('compose-body').value;
-      const sendBtn = document.getElementById('btn-send-submit');
-
-      sendBtn.disabled = true;
-      sendBtn.textContent = 'Sending...';
-
-      try {
-        await apiFetch('/api/send', {
-          method: 'POST',
-          body: JSON.stringify({ to, subject, text })
-        });
-        showToast('Message sent successfully!');
-        closeCompose();
-        loadFolders();
-        if (currentFolder === 'SENT') {
-          loadMessages();
-        }
-      } catch (err) {
-        showToast(`Send error: ${err.message}`);
-      } finally {
-        sendBtn.disabled = false;
-        sendBtn.innerHTML = `
-          <svg class="icon" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          Send Message
-        `;
-      }
-    }
-
-    // Helper utilities
-    function escapeHtml(str) {
-      return String(str || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-
-    function formatDate(ms) {
-      if (!ms) return '';
-      const d = new Date(ms);
-      const now = new Date();
-      if (d.toDateString() === now.toDateString()) {
-        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      }
-      return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    }
-
-    // Keyboard Shortcuts
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        closeCompose();
-      }
-    });
-  </script>
+  window.addEventListener('load', async () => {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) showApp(session); else showLogin();
+    sb.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT') showLogin(); });
+  });
+</script>
 </body>
 </html>
