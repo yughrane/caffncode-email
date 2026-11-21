@@ -186,9 +186,32 @@
   }
 
   window.addEventListener('load', async () => {
+    // Check if session was passed via URL hash (seamless SSO from admin portal)
+    if (window.location.hash) {
+      const hash = window.location.hash.replace(/^#/, '');
+      const params = new URLSearchParams(hash);
+      const access_token = params.get('access_token');
+      const refresh_token = params.get('refresh_token');
+      if (access_token && refresh_token) {
+        try {
+          const { data, error } = await sb.auth.setSession({ access_token, refresh_token });
+          if (!error && data?.session) {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+            await showApp(data.session);
+            return;
+          }
+        } catch (e) {
+          console.warn('SSO hash auth error:', e);
+        }
+      }
+    }
+
     const { data: { session } } = await sb.auth.getSession();
     if (session) showApp(session); else showLogin();
-    sb.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT') showLogin(); });
+    sb.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') showLogin();
+      else if (session && !mailApp) showApp(session);
+    });
   });
 </script>
 </body>
