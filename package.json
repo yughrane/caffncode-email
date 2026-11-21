@@ -1,0 +1,10 @@
+{
+  "name": "caffncode-email",
+  "version": "1.0.0",
+  "description": "CaffnCode Webmail client powered by Lark Open API & Supabase SSO",
+  "type": "module",
+  "scripts": {
+    "start": "serve ."
+  },
+  "dependencies": {}
+}
