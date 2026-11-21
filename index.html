@@ -21,10 +21,12 @@
     }
     html,body{height:100%}
     body{background:var(--cream);font-family:'Space Mono',monospace;color:var(--espresso);min-height:100vh}
-    body::after{
+    body::before{
       content:'';position:fixed;inset:0;
-      background-image:linear-gradient(var(--latte) 1px,transparent 1px),linear-gradient(90deg,var(--latte) 1px,transparent 1px);
-      background-size:32px 32px;opacity:0.15;pointer-events:none;z-index:0;
+      background-image:
+        linear-gradient(rgba(44,26,14,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(44,26,14,0.04) 1px, transparent 1px);
+      background-size:24px 24px;pointer-events:none;z-index:0;
     }
 
     /* NAV */
@@ -45,13 +47,22 @@
     @media(max-width:700px){
       nav{padding:0 1rem}
       .nav-user,.nav-link{display:none}
+      #login-screen{justify-content:center}
+      .login-wrap{justify-content:center;width:100%;padding:1.5rem}
     }
 
     .mail-wrap{position:relative;z-index:1;height:calc(100vh - 56px);padding:1.2rem}
     @media(max-width:700px){.mail-wrap{padding:.5rem}}
 
     /* LOGIN */
-    .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;z-index:1;padding:2rem}
+    #login-screen{
+      min-height:100vh;display:flex;
+      background:var(--cream);position:relative;z-index:1;
+    }
+    .login-wrap{
+      min-height:100vh;display:flex;align-items:center;justify-content:flex-start;
+      position:relative;z-index:1;padding:2.5rem clamp(2rem, 8vw, 6rem);
+    }
     .login-card{background:var(--foam);border:2px solid var(--espresso);padding:2.5rem;width:100%;max-width:400px;box-shadow:8px 8px 0 var(--caramel);position:relative}
     .login-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:repeating-linear-gradient(90deg,var(--caramel) 0,var(--caramel) 6px,var(--espresso) 6px,var(--espresso) 9px)}
     .login-logo{font-family:'Outfit',sans-serif;font-weight:900;font-size:1.4rem;letter-spacing:-0.03em;margin-bottom:0.2rem;display:flex;align-items:center;gap:8px}
@@ -78,8 +89,8 @@
 <div id="login-screen" style="display:none">
   <div class="login-wrap">
     <div class="login-card">
-      <div class="login-logo"><span class="pixel"></span> caffncode mail</div>
-      <div class="login-sub">Single sign-on · same account as the admin panel</div>
+      <div class="login-logo"><span class="pixel"></span> caffncode <span class="nav-badge" style="font-size:0.55rem;padding:2px 7px;letter-spacing:0.12em;vertical-align:middle;box-shadow:2px 2px 0 rgba(0,0,0,0.15)">MAIL</span></div>
+      <div class="login-sub">Webmail · sign in to continue</div>
 
       <form onsubmit="login(event)">
         <div class="field">
@@ -93,7 +104,7 @@
         <div id="login-error" class="error-box"></div>
         <button class="btn-primary" id="login-btn" type="submit">Sign in ↗</button>
       </form>
-      <div class="login-foot">Forgot your password? Ask a super admin to reset it from <a href="https://admin.caffncode.com">admin.caffncode.com</a>.</div>
+      <div class="login-foot">Sign in with your @caffncode.com account. Need an account or password reset? Visit <a href="https://admin.caffncode.com" target="_blank" rel="noopener">admin.caffncode.com</a>.</div>
     </div>
   </div>
 </div>
@@ -139,7 +150,7 @@
   }
 
   function showLogin() {
-    document.getElementById('login-screen').style.display = 'block';
+    document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('mail-app').style.display = 'none';
     if (mailApp) { mailApp.destroy(); mailApp = null; }
   }
