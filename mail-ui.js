@@ -327,7 +327,7 @@
       btn.classList.add('spin');
       if (!append) $('items').innerHTML = '<div class="cm-state">Brewing your inbox…</div>';
       try {
-        let q = `/api/inbox?folder=${encodeURIComponent(st.folder)}&page_size=30`;
+        let q = `/api/inbox?folder=${encodeURIComponent(st.folder)}&page_size=20`;
         if (append && st.pageToken) q += `&page_token=${encodeURIComponent(st.pageToken)}`;
         const data = await api(q);
         st.msgs = append ? st.msgs.concat(data.messages || []) : (data.messages || []);

@@ -9,7 +9,7 @@ export default async function handler(req, res) {
     const larkToken = await getLarkToken();
 
     const folder = (req.query.folder || 'INBOX').toUpperCase();
-    const pageSize = Math.min(parseInt(req.query.page_size || '30', 10), 50);
+    const pageSize = Math.min(Math.max(parseInt(req.query.page_size || '20', 10), 1), 20);
     const pageToken = req.query.page_token || '';
 
     let url = `https://open.larksuite.com/open-apis/mail/v1/user_mailboxes/${encodeURIComponent(email)}/messages?folder_id=${encodeURIComponent(folder)}&page_size=${pageSize}`;
