@@ -13,3 +13,5 @@ Webmail client for `email.caffncode.com`.
 - `SUPABASE_ANON_KEY`: Supabase anon/public key
 - `LARK_APP_ID`: Lark Custom App ID
 - `LARK_APP_SECRET`: Lark Custom App Secret
+
+<!-- trigger deploy -->
