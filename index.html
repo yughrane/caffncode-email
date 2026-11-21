@@ -940,7 +940,7 @@
       <form id="auth-form" onsubmit="handleLogin(event)">
         <div class="form-group">
           <label for="auth-email">Email Address</label>
-          <input type="email" id="auth-email" class="form-control" placeholder="yug@caffncode.com" required autocomplete="username">
+          <input type="email" id="auth-email" class="form-control" placeholder="name@caffncode.com" required autocomplete="username">
         </div>
         <div class="form-group">
           <label for="auth-password">Password</label>
@@ -1008,9 +1008,9 @@
 
       <div class="sidebar-user">
         <div class="user-info">
-          <div class="user-avatar" id="current-user-avatar">Y</div>
+          <div class="user-avatar" id="current-user-avatar">?</div>
           <div class="user-details">
-            <div class="user-email" id="current-user-email">yug@caffncode.com</div>
+            <div class="user-email" id="current-user-email">Loading...</div>
             <div class="user-status">online</div>
           </div>
         </div>
@@ -1100,7 +1100,7 @@
       <form class="compose-form" onsubmit="handleSend(event)">
         <div class="compose-field">
           <label>From</label>
-          <input type="text" id="compose-from" value="yug@caffncode.com" readonly style="opacity: 0.7;">
+          <input type="text" id="compose-from" value="" readonly style="opacity: 0.7;">
         </div>
         <div class="compose-field">
           <label>To</label>
@@ -1149,6 +1149,12 @@
     // Initialize Auth & App
     window.addEventListener('load', async () => {
       try {
+        sb.auth.onAuthStateChange((event, session) => {
+          if (session) {
+            setupAuthenticatedSession(session);
+          }
+        });
+
         const { data: { session } } = await sb.auth.getSession();
         if (session) {
           setupAuthenticatedSession(session);
@@ -1171,10 +1177,11 @@
       document.getElementById('auth-view').style.display = 'none';
       document.getElementById('app-view').style.display = 'flex';
 
-      const email = session.user?.email || 'yug@caffncode.com';
-      document.getElementById('current-user-email').textContent = email;
-      document.getElementById('current-user-avatar').textContent = email.charAt(0).toUpperCase();
-      document.getElementById('compose-from').value = email;
+      const userEmail = session.user?.email || '';
+      const displayEmail = userEmail.endsWith('@caffncode.com') ? userEmail : 'yug@caffncode.com';
+      document.getElementById('current-user-email').textContent = displayEmail;
+      document.getElementById('current-user-avatar').textContent = displayEmail.charAt(0).toUpperCase();
+      document.getElementById('compose-from').value = displayEmail;
 
       loadFolders();
       loadMessages();
