@@ -26,7 +26,12 @@ export default async function handler(req, res) {
       throw new Error(listData.msg || 'Failed to list messages');
     }
 
-    const messageIds = listData.data?.items || [];
+    const rawItems = listData.data?.items || [];
+    const messageIds = rawItems.map(item => {
+      if (typeof item === 'string') return item;
+      return item?.message_id || item?.id || '';
+    }).filter(Boolean);
+
     if (!messageIds.length) {
       return res.status(200).json({
         success: true,
@@ -48,6 +53,11 @@ export default async function handler(req, res) {
     });
 
     const batchData = await batchRes.json();
+    if (batchData.code !== 0) {
+      console.error('Lark batch_get failed:', batchData);
+      throw new Error(batchData.msg || 'Failed to fetch message details');
+    }
+
     const rawMessages = batchData.data?.messages || [];
 
     const messages = rawMessages.map(m => {
