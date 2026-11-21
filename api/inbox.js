@@ -1,16 +1,48 @@
 import { verifyUser, getLarkToken, setCors, errorStatus } from './_lark.js';
 
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://qjcnqslvoseyaabjjvkn.supabase.co';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'sb_publishable_01TSfCXJMwGFVt2PxJQvSA_n8eL2zn7';
+
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    const { email } = await verifyUser(req);
-    const larkToken = await getLarkToken();
+    const { user, email } = await verifyUser(req);
+    const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
 
     const folder = (req.query.folder || 'INBOX').toUpperCase();
     const pageSize = Math.min(Math.max(parseInt(req.query.page_size || '20', 10), 1), 20);
     const pageToken = req.query.page_token || '';
+
+    // If viewing SENT folder, include sent emails from Supabase
+    let sentDbMessages = [];
+    if (folder === 'SENT' && !pageToken) {
+      try {
+        const sRes = await fetch(`${SUPABASE_URL}/rest/v1/sent_emails?user_id=eq.${user.id}&order=created_at.desc&limit=20`, {
+          headers: { Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY }
+        });
+        if (sRes.ok) {
+          const rows = await sRes.json();
+          sentDbMessages = (rows || []).map(s => ({
+            id: s.id,
+            threadId: s.id,
+            subject: s.subject || '(no subject)',
+            from: { name: s.from_name || '', email: s.from_email || '' },
+            to: (s.to_recipients || []).map(r => typeof r === 'string' ? { email: r } : r),
+            date: new Date(s.created_at).getTime(),
+            unread: false,
+            labels: ['SENT'],
+            snippet: (s.body_text || '').slice(0, 140),
+            hasAttachments: false,
+          }));
+        }
+      } catch (err) {
+        console.warn('Could not fetch sent_emails from DB:', err);
+      }
+    }
+
+    const larkToken = await getLarkToken();
 
     let url = `https://open.larksuite.com/open-apis/mail/v1/user_mailboxes/${encodeURIComponent(email)}/messages?folder_id=${encodeURIComponent(folder)}&page_size=${pageSize}`;
     if (pageToken) {
@@ -23,6 +55,16 @@ export default async function handler(req, res) {
 
     const listData = await listRes.json();
     if (listData.code !== 0) {
+      // If Lark folder listing failed but we have sent messages from DB, return those
+      if (sentDbMessages.length > 0) {
+        return res.status(200).json({
+          success: true,
+          folder,
+          messages: sentDbMessages,
+          hasMore: false,
+          pageToken: '',
+        });
+      }
       throw new Error(listData.msg || 'Failed to list messages');
     }
 
@@ -36,7 +78,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         success: true,
         folder,
-        messages: [],
+        messages: sentDbMessages,
         hasMore: false,
         pageToken: '',
       });
@@ -87,13 +129,14 @@ export default async function handler(req, res) {
       };
     });
 
-    // Sort newest first
-    messages.sort((a, b) => b.date - a.date);
+    // Merge and sort newest first
+    const allMessages = [...sentDbMessages, ...messages];
+    allMessages.sort((a, b) => b.date - a.date);
 
     return res.status(200).json({
       success: true,
       folder,
-      messages,
+      messages: allMessages,
       hasMore: listData.data?.has_more || false,
       pageToken: listData.data?.page_token || '',
     });

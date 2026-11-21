@@ -1,17 +1,55 @@
 import { verifyUser, getLarkToken, setCors, errorStatus } from './_lark.js';
 
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://qjcnqslvoseyaabjjvkn.supabase.co';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'sb_publishable_01TSfCXJMwGFVt2PxJQvSA_n8eL2zn7';
+
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
     const { email } = await verifyUser(req);
-    const larkToken = await getLarkToken();
+    const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
 
     const messageId = req.query.id;
     if (!messageId) {
       return res.status(400).json({ success: false, error: 'Missing message id parameter' });
     }
+
+    // If ID is from sent_emails in Supabase (not an om_ Lark ID)
+    if (!messageId.startsWith('om_')) {
+      try {
+        const sRes = await fetch(`${SUPABASE_URL}/rest/v1/sent_emails?id=eq.${encodeURIComponent(messageId)}&select=*`, {
+          headers: { Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY }
+        });
+        if (sRes.ok) {
+          const rows = await sRes.json();
+          if (rows && rows.length > 0) {
+            const s = rows[0];
+            return res.status(200).json({
+              success: true,
+              message: {
+                id: s.id,
+                threadId: s.id,
+                subject: s.subject || '(no subject)',
+                from: { name: s.from_name || '', email: s.from_email || '' },
+                to: (s.to_recipients || []).map(r => typeof r === 'string' ? { email: r } : r),
+                cc: (s.cc_recipients || []).map(r => typeof r === 'string' ? { email: r } : r),
+                date: new Date(s.created_at).getTime(),
+                labels: ['SENT'],
+                html: s.body_html || (s.body_text ? `<pre style="font-family: inherit; white-space: pre-wrap;">${s.body_text}</pre>` : ''),
+                plainText: s.body_text || '',
+                attachments: [],
+              }
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('Could not read from sent_emails:', err);
+      }
+    }
+
+    const larkToken = await getLarkToken();
 
     const batchRes = await fetch(`https://open.larksuite.com/open-apis/mail/v1/user_mailboxes/${encodeURIComponent(email)}/messages/batch_get`, {
       method: 'POST',
