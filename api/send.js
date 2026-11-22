@@ -51,6 +51,7 @@ export default async function handler(req, res) {
       headers: {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
         'Content-Type': 'application/json',
+        'User-Agent': 'CaffnCode/1.0',
       },
       body: JSON.stringify({
         from: `${senderName} <${email}>`,
