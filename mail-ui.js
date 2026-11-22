@@ -39,8 +39,9 @@
   /* list */
   .cm-list{border-right:2px solid var(--cm-espresso);display:flex;flex-direction:column;min-height:0;background:var(--cm-cream)}
   .cm-list-head{display:flex;align-items:center;gap:8px;padding:.9rem 1rem .8rem;border-bottom:2px solid var(--cm-espresso)}
-  .cm-list-title{font-family:'Outfit',sans-serif;font-weight:800;font-size:1.05rem;letter-spacing:-.02em;flex:1}
+  .cm-list-title{font-family:'Outfit',sans-serif;font-weight:800;font-size:1.05rem;letter-spacing:-.02em}
   .cm-count{font-size:.58rem;background:var(--cm-latte);padding:2px 7px;font-weight:700}
+  .cm-btn.cm-mark-all{padding:3px 8px;font-size:.56rem;white-space:nowrap;margin-left:auto;display:inline-flex;align-items:center;gap:3px;box-shadow:1px 1px 0 var(--cm-latte)}
   .cm-icon-btn{background:transparent;border:2px solid var(--cm-espresso);width:30px;height:30px;cursor:pointer;font-size:.85rem;
       display:inline-flex;align-items:center;justify-content:center;box-shadow:2px 2px 0 var(--cm-latte);transition:all .12s;color:var(--cm-espresso)}
   .cm-icon-btn:hover{transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--cm-caramel)}
@@ -171,7 +172,24 @@
     injectCss();
     const apiBase = (opts.apiBase || '').replace(/\/$/, '');
     const getToken = opts.getToken;
-    const st = { folder: 'INBOX', msgs: [], pageToken: '', hasMore: false, current: null, mailbox: '', displayName: '' };
+    const st = { folder: 'INBOX', msgs: [], pageToken: '', hasMore: false, current: null, mailbox: '', displayName: '', readIds: new Set() };
+
+    function getReadStorageKey() {
+      return 'cm_read_' + (st.mailbox || 'default');
+    }
+    function initReadIds() {
+      try {
+        const stored = JSON.parse(localStorage.getItem(getReadStorageKey()) || '[]');
+        st.readIds = new Set(stored);
+      } catch {
+        st.readIds = new Set();
+      }
+    }
+    function saveReadIds() {
+      try {
+        localStorage.setItem(getReadStorageKey(), JSON.stringify([...st.readIds]));
+      } catch {}
+    }
 
     root.innerHTML = `
       <div class="cm">
@@ -190,6 +208,7 @@
             <button class="cm-icon-btn cm-menu" data-act="menu" title="Folders">☰</button>
             <span class="cm-list-title" data-el="title">Inbox</span>
             <span class="cm-count" data-el="count">0</span>
+            <button class="cm-btn cm-mark-all" data-act="mark-all-read" title="Mark all messages in this folder as read">✓ Mark all read</button>
             <button class="cm-icon-btn" data-act="compose-mini" title="Compose">✎</button>
             <button class="cm-icon-btn" data-act="refresh" title="Refresh">↻</button>
           </div>
@@ -207,6 +226,7 @@
                 <button class="cm-btn back" data-act="back">← Back</button>
                 <button class="cm-btn" data-act="reply">↩ Reply</button>
                 <button class="cm-btn" data-act="forward">↪ Forward</button>
+                <button class="cm-btn" data-act="toggle-read" data-el="btn-toggle-read">✉ Mark unread</button>
                 <button class="cm-btn danger" data-act="delete">🗑 Delete</button>
               </div>
               <div class="cm-msg-subj" data-el="subj"></div>
@@ -283,6 +303,7 @@
         const data = await api('/api/folders');
         st.mailbox = data.email || '';
         st.displayName = data.displayName || '';
+        initReadIds();
         $('mailbox').textContent = st.mailbox || '—';
         $('c-from').value = st.displayName ? `${st.displayName} <${st.mailbox}>` : st.mailbox;
         (data.folders || []).forEach((f) => {
@@ -330,7 +351,11 @@
         let q = `/api/inbox?folder=${encodeURIComponent(st.folder)}&page_size=20`;
         if (append && st.pageToken) q += `&page_token=${encodeURIComponent(st.pageToken)}`;
         const data = await api(q);
-        st.msgs = append ? st.msgs.concat(data.messages || []) : (data.messages || []);
+        const incoming = (data.messages || []).map((m) => {
+          if (st.readIds.has(m.id)) m.unread = false;
+          return m;
+        });
+        st.msgs = append ? st.msgs.concat(incoming) : incoming;
         st.hasMore = !!data.hasMore;
         st.pageToken = data.pageToken || '';
         renderList();
@@ -354,6 +379,19 @@
       if (listItem) listItem.classList.remove('unread');
       const cached = st.msgs.find((m) => m.id === id);
       if (cached) cached.unread = false;
+      st.readIds.add(id);
+      saveReadIds();
+
+      const btnToggleRead = $('btn-toggle-read');
+      if (btnToggleRead) btnToggleRead.textContent = '✉ Mark unread';
+
+      // Update badge if any
+      const b = root.querySelector(`[data-badge="${st.folder}"]`);
+      if (b && !b.hidden) {
+        const cur = parseInt(b.textContent || '1', 10);
+        if (cur <= 1) b.hidden = true;
+        else b.textContent = String(cur - 1);
+      }
 
       $('empty').style.display = 'none';
       $('msg').hidden = false;
@@ -438,15 +476,97 @@
     async function del() {
       if (!st.current) return;
       if (!confirm('Delete this message?')) return;
+      const targetId = st.current.id;
       try {
-        await api(`/api/action?action=delete&id=${encodeURIComponent(st.current.id)}`, { method: 'POST' });
-        st.msgs = st.msgs.filter((m) => m.id !== st.current.id);
+        await api('/api/action', {
+          method: 'POST',
+          body: JSON.stringify({ action: 'delete', id: targetId }),
+        });
+        st.msgs = st.msgs.filter((m) => m.id !== targetId);
+        st.readIds.delete(targetId);
+        saveReadIds();
         showEmpty();
         renderList();
         loadFolders();
         toast('Message deleted');
       } catch (err) {
         toast('⚠ ' + err.message);
+      }
+    }
+
+    async function toggleRead() {
+      if (!st.current) return;
+      const targetId = st.current.id;
+      const cached = st.msgs.find((m) => m.id === targetId);
+      const isCurrentlyUnread = cached ? cached.unread : false;
+      const newUnread = !isCurrentlyUnread;
+
+      if (cached) cached.unread = newUnread;
+      if (newUnread) {
+        st.readIds.delete(targetId);
+      } else {
+        st.readIds.add(targetId);
+      }
+      saveReadIds();
+
+      const listItem = root.querySelector(`.cm-item[data-id="${window.CSS && CSS.escape ? CSS.escape(targetId) : targetId}"]`);
+      if (listItem) {
+        listItem.classList.toggle('unread', newUnread);
+      }
+
+      const btnToggleRead = $('btn-toggle-read');
+      if (btnToggleRead) {
+        btnToggleRead.textContent = newUnread ? '✓ Mark read' : '✉ Mark unread';
+      }
+
+      toast(newUnread ? 'Marked as unread' : 'Marked as read');
+    }
+
+    async function markAllAsRead() {
+      if (!st.msgs.length) {
+        toast('No messages in this folder');
+        return;
+      }
+      const unreadCount = st.msgs.filter((m) => m.unread).length;
+      if (unreadCount === 0) {
+        toast('All messages are already read');
+        return;
+      }
+
+      const unreadIds = [];
+      st.msgs.forEach((m) => {
+        if (m.unread) {
+          unreadIds.push(m.id);
+          m.unread = false;
+        }
+        st.readIds.add(m.id);
+      });
+      saveReadIds();
+
+      root.querySelectorAll('.cm-item.unread').forEach((el) => el.classList.remove('unread'));
+      const b = root.querySelector(`[data-badge="${st.folder}"]`);
+      if (b) {
+        b.textContent = '0';
+        b.hidden = true;
+      }
+
+      const btnToggleRead = $('btn-toggle-read');
+      if (btnToggleRead && st.current) btnToggleRead.textContent = '✉ Mark unread';
+
+      try {
+        const parentStat = window.parent?.document?.getElementById('stat-mail') || document.getElementById('stat-mail');
+        if (parentStat && st.folder === 'INBOX') parentStat.textContent = '0';
+      } catch {}
+
+      toast(`✓ Marked ${unreadCount} message${unreadCount > 1 ? 's' : ''} as read`);
+
+      try {
+        await api('/api/action', {
+          method: 'POST',
+          body: JSON.stringify({ action: 'mark_all_read', folder: st.folder, ids: unreadIds }),
+        });
+      } catch (err) {
+        console.warn('Backend mark_all_read note:', err.message);
       }
     }
 
@@ -476,6 +596,8 @@
         case 'compose': case 'compose-mini': openCompose(); break;
         case 'close': closeCompose(); break;
         case 'refresh': loadFolders(); loadMessages(); break;
+        case 'mark-all-read': markAllAsRead(); break;
+        case 'toggle-read': toggleRead(); break;
         case 'more': loadMessages(true); break;
         case 'menu': cm.classList.toggle('cm-show-folders'); break;
         case 'back': showEmpty(); break;
