@@ -6,7 +6,7 @@ Webmail client for `email.caffncode.com`.
 - **Authentication:** Supabase Auth (SSO across CaffnCode ecosystem)
 - **Backend:** Vercel Serverless Functions (`/api/*`)
 - **Email Platform:** Lark Suite Open Platform Mail REST API (Multi-tenant, OAuth2 / Tenant Access Token)
-- **Aesthetic:** Dark Roast Retro Terminal Espresso (Outfit & Space Mono fonts)
+- **Aesthetic:** Dark Roast Espresso & Foam (Inter Tight Black & Helvetica Neue)
 
 ### Environment Variables (configured in Vercel)
 - `SUPABASE_URL`: Supabase project endpoint

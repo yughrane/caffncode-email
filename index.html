@@ -7,7 +7,7 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E📬%3C/text%3E%3C/svg%3E"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@600;700;800;900&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/mail-ui.js"></script>
   <style>
@@ -20,7 +20,7 @@
       --red:#8b1a1a;--red-lt:#fde8e8;
     }
     html,body{height:100%}
-    body{background:var(--cream);font-family:'Space Mono',monospace;color:var(--espresso);min-height:100vh}
+    body{background:var(--cream);font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:var(--espresso);min-height:100vh}
     body::before{
       content:'';position:fixed;inset:0;
       background-image:
@@ -35,14 +35,14 @@
       padding:0 2rem;height:56px;display:flex;align-items:center;justify-content:space-between;
     }
     .nav-icon{display:inline-block;flex-shrink:0;vertical-align:middle;box-shadow:2px 2px 0 rgba(255,255,255,0.2)}
-    .nav-logo{font-family:'Outfit',sans-serif;font-weight:800;font-size:1.05rem;letter-spacing:-0.03em;color:var(--cream);display:flex;align-items:center;gap:8px}
+    .nav-logo{font-family:'Inter Tight', 'Helvetica Neue', Helvetica, Arial, sans-serif;font-weight:900;font-size:1.05rem;letter-spacing:-0.04em;color:var(--cream);display:flex;align-items:center;gap:8px}
     .nav-badge{font-size:0.55rem;text-transform:uppercase;letter-spacing:0.12em;background:var(--caramel);color:var(--espresso);padding:2px 8px;box-shadow:2px 2px 0 rgba(0,0,0,0.2);font-weight:700}
     .nav-right{display:flex;align-items:center;gap:12px}
     .nav-user{font-size:0.68rem;color:var(--steam);letter-spacing:0.05em}
     .nav-user strong{color:var(--caramel)}
     .nav-link{font-size:0.6rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--latte);text-decoration:none;border:1.5px solid rgba(255,255,255,0.2);padding:5px 10px;transition:all .15s}
     .nav-link:hover{border-color:var(--caramel);color:var(--caramel)}
-    .btn-logout{background:transparent;border:1.5px solid rgba(255,255,255,0.2);color:var(--steam);font-family:'Space Mono',monospace;font-size:0.6rem;text-transform:uppercase;letter-spacing:0.1em;padding:5px 10px;cursor:pointer;transition:all 0.15s}
+    .btn-logout{background:transparent;border:1.5px solid rgba(255,255,255,0.2);color:var(--steam);font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:0.6rem;text-transform:uppercase;letter-spacing:0.1em;padding:5px 10px;cursor:pointer;transition:all 0.15s}
     .btn-logout:hover{border-color:var(--caramel);color:var(--caramel)}
     @media(max-width:700px){
       nav{padding:0 1rem}
@@ -65,14 +65,14 @@
     }
     .login-card{background:var(--foam);border:2px solid var(--espresso);padding:2.5rem;width:100%;max-width:400px;box-shadow:8px 8px 0 var(--caramel);position:relative}
     .login-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:repeating-linear-gradient(90deg,var(--caramel) 0,var(--caramel) 6px,var(--espresso) 6px,var(--espresso) 9px)}
-    .login-logo{font-family:'Outfit',sans-serif;font-weight:900;font-size:1.4rem;letter-spacing:-0.03em;margin-bottom:0.2rem;display:flex;align-items:center;gap:8px}
+    .login-logo{font-family:'Inter Tight', 'Helvetica Neue', Helvetica, Arial, sans-serif;font-weight:900;font-size:1.4rem;letter-spacing:-0.04em;margin-bottom:0.2rem;display:flex;align-items:center;gap:8px}
     .login-logo .pixel{width:10px;height:10px;background:var(--caramel);box-shadow:3px 3px 0 var(--espresso);display:inline-block}
     .login-sub{font-size:0.68rem;color:var(--mocha);margin-bottom:2rem}
     .field{display:flex;flex-direction:column;gap:6px;margin-bottom:1rem}
     .field label{font-size:0.6rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--mocha);font-weight:700}
-    .field input{border:2px solid var(--espresso);background:var(--cream);padding:9px 12px;font-family:'Space Mono',monospace;font-size:0.78rem;color:var(--espresso);outline:none;transition:border-color 0.15s}
+    .field input{border:2px solid var(--espresso);background:var(--cream);padding:9px 12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:0.78rem;color:var(--espresso);outline:none;transition:border-color 0.15s}
     .field input:focus{border-color:var(--caramel)}
-    .btn-primary{background:var(--espresso);color:var(--cream);border:none;padding:10px 20px;font-family:'Space Mono',monospace;font-weight:700;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.1em;box-shadow:4px 4px 0 var(--caramel);cursor:pointer;transition:all 0.12s;display:inline-flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:1rem}
+    .btn-primary{background:var(--espresso);color:var(--cream);border:none;padding:10px 20px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-weight:700;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.1em;box-shadow:4px 4px 0 var(--caramel);cursor:pointer;transition:all 0.12s;display:inline-flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:1rem}
     .btn-primary:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 var(--caramel)}
     .btn-primary:disabled{opacity:0.5;transform:none;box-shadow:none;cursor:not-allowed}
     .error-box{background:var(--red-lt);border:2px solid var(--red);padding:10px 14px;font-size:0.72rem;color:var(--red);margin-bottom:1rem;display:none}
@@ -130,7 +130,7 @@
       <span class="nav-badge">mail</span>
     </div>
     <div class="nav-right">
-      <span class="nav-user">Signed in as <strong id="nav-username">—</strong></span>
+      <span class="nav-user">Signed in as <strong id="nav-username">-</strong></span>
       <a class="nav-link" href="https://admin.caffncode.com">Admin ↗</a>
       <button class="btn-logout" onclick="logout()">Sign out</button>
     </div>

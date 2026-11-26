@@ -1,5 +1,5 @@
 /*!
- * CaffnCode Mail UI — shared webmail widget
+ * CaffnCode Mail UI - shared webmail widget
  * Used by email.caffncode.com and admin.caffncode.com
  *
  *   CaffnMail.mount(element, {
@@ -13,10 +13,10 @@
       --cm-latte:var(--latte,#e8c9a0);--cm-foam:var(--foam,#f5ede3);--cm-steam:var(--steam,#d4a574);--cm-mocha:var(--mocha,#6b3d1e);
       --cm-red:var(--red,#8b1a1a);--cm-red-lt:var(--red-lt,#fde8e8);
       display:grid;grid-template-columns:190px minmax(260px,340px) 1fr;height:100%;min-height:0;
-      font-family:'Space Mono',monospace;color:var(--cm-espresso);background:var(--cm-cream);
+      font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:var(--cm-espresso);background:var(--cm-cream);
       border:2px solid var(--cm-espresso);box-shadow:4px 4px 0 var(--cm-latte);position:relative;overflow:hidden}
   .cm *{box-sizing:border-box}
-  .cm button{font-family:'Space Mono',monospace}
+  .cm button{font-family:'Helvetica Neue', Helvetica, Arial, sans-serif}
   .cm::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;z-index:2;
       background:repeating-linear-gradient(90deg,var(--cm-caramel) 0,var(--cm-caramel) 5px,var(--cm-espresso) 5px,var(--cm-espresso) 8px)}
 
@@ -39,7 +39,7 @@
   /* list */
   .cm-list{border-right:2px solid var(--cm-espresso);display:flex;flex-direction:column;min-height:0;background:var(--cm-cream)}
   .cm-list-head{display:flex;align-items:center;gap:8px;padding:.9rem 1rem .8rem;border-bottom:2px solid var(--cm-espresso)}
-  .cm-list-title{font-family:'Outfit',sans-serif;font-weight:800;font-size:1.05rem;letter-spacing:-.02em}
+  .cm-list-title{font-family:'Inter Tight', 'Helvetica Neue', Helvetica, Arial, sans-serif;font-weight:900;font-size:1.05rem;letter-spacing:-.03em}
   .cm-count{font-size:.58rem;background:var(--cm-latte);padding:2px 7px;font-weight:700}
   .cm-btn.cm-mark-all{padding:3px 8px;font-size:.56rem;white-space:nowrap;margin-left:auto;display:inline-flex;align-items:center;gap:3px;box-shadow:1px 1px 0 var(--cm-latte)}
   .cm-icon-btn{background:transparent;border:2px solid var(--cm-espresso);width:30px;height:30px;cursor:pointer;font-size:.85rem;
@@ -54,7 +54,7 @@
   .cm-item-top{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:2px}
   .cm-from{font-size:.7rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--cm-mocha)}
   .cm-date{font-size:.58rem;color:var(--cm-steam);white-space:nowrap}
-  .cm-subj{font-family:'Outfit',sans-serif;font-size:.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cm-subj{font-family:'Inter Tight', 'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .cm-snip{font-size:.6rem;color:var(--cm-steam);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
   .cm-item.unread .cm-from{color:var(--cm-espresso);font-weight:700}
   .cm-item.unread .cm-subj{font-weight:800}
@@ -77,12 +77,12 @@
   .cm-btn:hover{transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--cm-caramel)}
   .cm-btn.danger{background:var(--cm-red);border-color:var(--cm-red);color:#fff;box-shadow:2px 2px 0 rgba(139,26,26,.35)}
   .cm-btn.back{display:none}
-  .cm-msg-subj{font-family:'Outfit',sans-serif;font-weight:800;font-size:1.3rem;letter-spacing:-.02em;line-height:1.25;margin-bottom:.7rem;word-break:break-word}
+  .cm-msg-subj{font-family:'Inter Tight', 'Helvetica Neue', Helvetica, Arial, sans-serif;font-weight:900;font-size:1.3rem;letter-spacing:-.03em;line-height:1.25;margin-bottom:.7rem;word-break:break-word}
   .cm-msg-meta{display:flex;align-items:center;gap:10px}
   .cm-avatar{width:36px;height:36px;flex-shrink:0;border:2px solid var(--cm-espresso);background:var(--cm-latte);display:flex;align-items:center;justify-content:center;
-      font-family:'Outfit',sans-serif;font-weight:800;color:var(--cm-caramel);font-size:.95rem}
+      font-family:'Inter Tight', 'Helvetica Neue', Helvetica, Arial, sans-serif;font-weight:800;color:var(--cm-caramel);font-size:.95rem}
   .cm-meta-text{flex:1;min-width:0;font-size:.62rem;line-height:1.6}
-  .cm-meta-text b{font-family:'Outfit',sans-serif;font-size:.85rem}
+  .cm-meta-text b{font-family:'Inter Tight', 'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:.85rem}
   .cm-meta-text span{color:var(--cm-steam);word-break:break-all}
   .cm-meta-date{font-size:.58rem;color:var(--cm-mocha);white-space:nowrap;align-self:flex-start}
   .cm-attach{display:flex;gap:6px;flex-wrap:wrap;margin-top:.7rem}
@@ -94,14 +94,14 @@
   .cm-modal{position:fixed;inset:0;background:rgba(26,15,7,.55);display:flex;align-items:center;justify-content:center;z-index:10000;padding:1rem}
   .cm-modal[hidden]{display:none}
   .cm-card{width:100%;max-width:640px;background:var(--cm-foam);border:2px solid var(--cm-espresso);box-shadow:8px 8px 0 var(--cm-caramel);
-      position:relative;display:flex;flex-direction:column;max-height:90vh;font-family:'Space Mono',monospace;color:var(--cm-espresso)}
+      position:relative;display:flex;flex-direction:column;max-height:90vh;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:var(--cm-espresso)}
   .cm-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:repeating-linear-gradient(90deg,var(--cm-caramel) 0,var(--cm-caramel) 6px,var(--cm-espresso) 6px,var(--cm-espresso) 9px)}
   .cm-card-head{display:flex;align-items:center;justify-content:space-between;padding:1.1rem 1.3rem .6rem}
-  .cm-card-title{font-family:'Outfit',sans-serif;font-weight:800;font-size:1.1rem;letter-spacing:-.02em}
+  .cm-card-title{font-family:'Inter Tight', 'Helvetica Neue', Helvetica, Arial, sans-serif;font-weight:900;font-size:1.1rem;letter-spacing:-.03em}
   .cm-card-body{padding:.4rem 1.3rem 1rem;overflow-y:auto;display:flex;flex-direction:column;gap:.75rem}
   .cm-field{display:flex;flex-direction:column;gap:5px}
   .cm-field label{font-size:.58rem;text-transform:uppercase;letter-spacing:.12em;color:var(--cm-mocha);font-weight:700}
-  .cm-field input,.cm-field textarea{border:2px solid var(--cm-espresso);background:var(--cm-cream);padding:8px 11px;font-family:'Space Mono',monospace;
+  .cm-field input,.cm-field textarea{border:2px solid var(--cm-espresso);background:var(--cm-cream);padding:8px 11px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;
       font-size:.75rem;color:var(--cm-espresso);outline:none;width:100%}
   .cm-field input:focus,.cm-field textarea:focus{border-color:var(--cm-caramel)}
   .cm-field input[readonly]{opacity:.65}
@@ -114,7 +114,7 @@
   .cm-error{background:var(--cm-red-lt);border:2px solid var(--cm-red);color:var(--cm-red);padding:8px 12px;font-size:.66rem}
   .cm-error[hidden]{display:none}
   .cm-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--cm-espresso);color:var(--cm-cream);
-      border:1.5px solid var(--cm-caramel);font-family:'Space Mono',monospace;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+      border:1.5px solid var(--cm-caramel);font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
       padding:9px 18px;box-shadow:3px 3px 0 var(--cm-caramel);opacity:0;pointer-events:none;transition:all .25s;z-index:10001;white-space:nowrap}
   .cm-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
@@ -200,7 +200,7 @@
             <div class="cm-folder${id === 'INBOX' ? ' active' : ''}" data-folder="${id}">
               <span>${ic}&nbsp; ${name}</span><span class="cm-badge" data-badge="${id}" hidden></span>
             </div>`).join('')}
-          <div class="cm-mailbox"><strong>Mailbox</strong><span data-el="mailbox">—</span></div>
+          <div class="cm-mailbox"><strong>Mailbox</strong><span data-el="mailbox">-</span></div>
         </aside>
 
         <section class="cm-list">
@@ -304,7 +304,7 @@
         st.mailbox = data.email || '';
         st.displayName = data.displayName || '';
         initReadIds();
-        $('mailbox').textContent = st.mailbox || '—';
+        $('mailbox').textContent = st.mailbox || '-';
         $('c-from').value = st.displayName ? `${st.displayName} <${st.mailbox}>` : st.mailbox;
         (data.folders || []).forEach((f) => {
           const b = root.querySelector(`[data-badge="${f.id}"]`);
@@ -332,7 +332,7 @@
       }
       $('items').innerHTML = st.msgs.map((m) => {
         const who = st.folder === 'SENT' || st.folder === 'DRAFT'
-          ? 'To: ' + ((m.to || []).map((t) => t.name || t.email).join(', ') || '—')
+          ? 'To: ' + ((m.to || []).map((t) => t.name || t.email).join(', ') || '-')
           : (m.from?.name || m.from?.email || 'Unknown');
         return `
           <div class="cm-item${m.unread ? ' unread' : ''}${st.current?.id === m.id ? ' active' : ''}" data-id="${esc(m.id)}">
@@ -397,7 +397,7 @@
       $('msg').hidden = false;
       cm.classList.add('cm-reading');
       $('subj').textContent = cached?.subject || 'Loading…';
-      $('frame').srcdoc = '<p style="font-family:monospace;color:#999;padding:16px">Loading…</p>';
+      $('frame').srcdoc = '<p style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#999;padding:16px">Loading…</p>';
 
       try {
         const { message: m } = await api(`/api/message?id=${encodeURIComponent(id)}`);
@@ -422,7 +422,7 @@
           a{color:#c87941}img{max-width:100%;height:auto}blockquote{border-left:3px solid #e8c9a0;margin:0;padding-left:12px;color:#555}</style>
           </head><body>${body}</body></html>`;
       } catch (err) {
-        $('frame').srcdoc = `<p style="font-family:monospace;color:#8b1a1a;padding:16px">⚠ ${esc(err.message)}</p>`;
+        $('frame').srcdoc = `<p style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#8b1a1a;padding:16px">⚠ ${esc(err.message)}</p>`;
       }
     }
 
@@ -444,7 +444,7 @@
       const when = m.date ? new Date(m.date).toLocaleString() : '';
       const who = m.from?.name ? `${m.from.name} <${m.from.email}>` : (m.from?.email || '');
       const text = (m.plainText || '').split('\n').map((l) => '> ' + l).join('\n');
-      return `\n\n— On ${when}, ${who} wrote:\n${text}`;
+      return `\n\nOn ${when}, ${who} wrote:\n${text}`;
     }
 
     async function send(e) {
@@ -614,7 +614,7 @@
           if (m) openCompose({
             title: 'Forward',
             subject: /^fwd?:/i.test(m.subject || '') ? m.subject : `Fwd: ${m.subject || ''}`,
-            body: `\n\n—— Forwarded message ——\nFrom: ${m.from?.name || ''} <${m.from?.email || ''}>\nDate: ${m.date ? new Date(m.date).toLocaleString() : ''}\nSubject: ${m.subject || ''}\n\n${m.plainText || ''}`,
+            body: `\n\n---------- Forwarded message ----------\nFrom: ${m.from?.name || ''} <${m.from?.email || ''}>\nDate: ${m.date ? new Date(m.date).toLocaleString() : ''}\nSubject: ${m.subject || ''}\n\n${m.plainText || ''}`,
           });
           break;
       }
