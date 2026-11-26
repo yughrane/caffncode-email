@@ -16,8 +16,6 @@ function httpError(status, message) {
 
 /**
  * Verifies the Supabase session and resolves which Lark mailbox the user may access.
- * Mailbox = profiles.mailbox (set by a super admin) or, failing that, the user's own
- * auth email if it is an @caffncode.com address. No mailbox → 403.
  */
 export async function verifyUser(req) {
   const authHeader = req.headers['authorization'] || req.headers['Authorization'] || '';
@@ -26,19 +24,23 @@ export async function verifyUser(req) {
 
   const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
     headers: { Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY },
+    signal: AbortSignal.timeout(6000),
   });
   if (!res.ok) throw httpError(401, 'Unauthorized: Invalid or expired session');
   const user = await res.json();
 
-  // Read own profile with the user's token (RLS: users can read their own row)
+  // Read own profile with a fast timeout so slow DB lookup never causes a Vercel gateway timeout
   let profile = null;
   try {
     const pRes = await fetch(
       `${SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}&select=mailbox,display_name,username,role`,
-      { headers: { Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY } },
+      {
+        headers: { Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY },
+        signal: AbortSignal.timeout(3000),
+      },
     );
     if (pRes.ok) profile = (await pRes.json())?.[0] || null;
-  } catch { /* ignore */ }
+  } catch { /* fallback to user metadata / auth email */ }
 
   const authEmail = (user.email || '').toLowerCase();
   const mailbox = (profile?.mailbox || (authEmail.endsWith('@caffncode.com') ? authEmail : '')).toLowerCase();
@@ -49,7 +51,7 @@ export async function verifyUser(req) {
   return {
     user,
     email: mailbox,
-    displayName: profile?.display_name || profile?.username || mailbox.split('@')[0],
+    displayName: profile?.display_name || profile?.username || user.user_metadata?.display_name || user.user_metadata?.username || mailbox.split('@')[0],
     role: profile?.role || 'member',
   };
 }
@@ -63,8 +65,9 @@ export async function getLarkToken() {
 
   const res = await fetch('https://open.larksuite.com/open-apis/auth/v3/tenant_access_token/internal', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    headers: { 'Content-Type': 'application/json; charset=utf-8', 'User-Agent': 'CaffnCode/1.0' },
     body: JSON.stringify({ app_id: LARK_APP_ID, app_secret: LARK_APP_SECRET }),
+    signal: AbortSignal.timeout(6000),
   });
 
   const data = await res.json();
@@ -80,7 +83,7 @@ export async function getLarkToken() {
 export function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Idempotency-Key');
 }
 
 export function errorStatus(err) {

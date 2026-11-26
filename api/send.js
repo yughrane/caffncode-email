@@ -1,19 +1,29 @@
 import { verifyUser, setCors, errorStatus } from './_lark.js';
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
+const RESEND_API_KEY = (process.env.RESEND_API_KEY || '').trim();
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://qjcnqslvoseyaabjjvkn.supabase.co';
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'sb_publishable_01TSfCXJMwGFVt2PxJQvSA_n8eL2zn7';
 
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method not allowed' });
 
   try {
+    if (!RESEND_API_KEY) {
+      return res.status(500).json({ success: false, error: 'Server is missing RESEND_API_KEY' });
+    }
+
     const { user, email, displayName } = await verifyUser(req);
 
-    const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
-    const { to, subject, html, text, cc, bcc, attachments, inReplyTo, references } = body;
+    let body = {};
+    if (typeof req.body === 'string') {
+      try { body = JSON.parse(req.body); } catch { body = {}; }
+    } else if (req.body && typeof req.body === 'object') {
+      body = req.body;
+    }
+
+    const { to, subject, html, text, cc, bcc, attachments, inReplyTo, references, idempotencyKey } = body;
 
     if (!to || (!Array.isArray(to) && typeof to !== 'string')) {
       return res.status(400).json({ success: false, error: 'Recipient "to" is required' });
@@ -44,15 +54,19 @@ export default async function handler(req, res) {
     const textContent = text || (html ? html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n').replace(/<[^>]+>/g, '') : '');
     const senderName = displayName || (email.split('@')[0]);
 
-    // Format attachments for Resend: [{ filename, content (base64), content_type }]
+    // Format attachments for Resend: supports inline base64 `content` OR remote R2 `path` URL
     const resendAttachments = Array.isArray(attachments)
       ? attachments
-          .filter(a => a && a.filename && a.content)
-          .map(a => ({
-            filename: String(a.filename),
-            content: String(a.content).replace(/^data:[^;]+;base64,/, ''),
-            ...(a.contentType ? { content_type: String(a.contentType) } : {}),
-          }))
+          .filter(a => a && a.filename && (a.content || a.path))
+          .map(a => {
+            if (a.path) {
+              return { filename: String(a.filename), path: String(a.path) };
+            }
+            return {
+              filename: String(a.filename),
+              content: String(a.content).replace(/^data:[^;]+;base64,/, ''),
+            };
+          })
       : [];
 
     // Threading headers for replies
@@ -76,23 +90,31 @@ export default async function handler(req, res) {
       headers: Object.keys(customHeaders).length ? customHeaders : undefined,
     };
 
+    const resendHeaders = {
+      'Authorization': `Bearer ${RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+      'User-Agent': 'CaffnCode/1.0',
+    };
+    const idem = idempotencyKey || req.headers['idempotency-key'];
+    if (idem) resendHeaders['Idempotency-Key'] = String(idem).slice(0, 255);
+
     const resendRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-        'User-Agent': 'CaffnCode/1.0',
-      },
+      headers: resendHeaders,
       body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(20000),
     });
 
-    const resendData = await resendRes.json();
+    const resendText = await resendRes.text();
+    let resendData = {};
+    try { resendData = resendText ? JSON.parse(resendText) : {}; } catch { resendData = { message: resendText }; }
+
     if (!resendRes.ok || resendData.error) {
-      const msg = resendData.error?.message || resendData.message || 'Failed to send email via mail service';
+      const msg = resendData.error?.message || resendData.message || `Mail service error (${resendRes.status})`;
       throw new Error(msg);
     }
 
-    // Save sent email record to Supabase (best effort)
+    // Save sent email record to Supabase (best effort, tight timeout so it never stalls send)
     const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
     if (token) {
       try {
@@ -115,9 +137,10 @@ export default async function handler(req, res) {
             body_text: textContent,
             body_html: htmlContent,
           }),
+          signal: AbortSignal.timeout(2500),
         });
       } catch (saveErr) {
-        console.warn('Could not archive sent email to DB:', saveErr);
+        console.warn('Could not archive sent email to DB:', saveErr.message);
       }
     }
 

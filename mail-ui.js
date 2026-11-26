@@ -4,6 +4,8 @@
  */
 (function () {
   const ADMIN_API_BASE = 'https://admin.caffncode.com';
+  const ASSET_UPLOAD = 'https://clipdrop-r2.yug-rane.workers.dev';
+  const ASSET_PUBLIC = 'https://assets.caffncode.com';
 
   const STYLES = `
   .cm{--cm-cream:var(--cream,#fdf6f0);--cm-espresso:var(--espresso,#2c1a0e);--cm-caramel:var(--caramel,#c87941);
@@ -1186,24 +1188,55 @@
     async function addComposeFiles(fileList) {
       const files = [...(fileList || [])];
       let totalSize = st.composeFiles.reduce((acc, f) => acc + (f.size || 0), 0);
+      let inlineBytes = st.composeFiles.reduce((acc, f) => acc + (f.content ? (f.size || 0) : 0), 0);
+
       for (const file of files) {
-        if (totalSize + file.size > 8 * 1024 * 1024) {
-          toast('⚠ Attachments capped at 8 MB per email');
+        if (totalSize + file.size > 25 * 1024 * 1024) {
+          toast('⚠ Attachments capped at 25 MB per email');
           break;
         }
         totalSize += file.size;
-        const base64 = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        st.composeFiles.push({
-          filename: file.name,
-          size: file.size,
-          contentType: file.type || 'application/octet-stream',
-          content: base64,
-        });
+
+        // Keep Vercel serverless POST body well under the 4.5 MB gateway limit:
+        // files > 2 MB (or once inline base64 exceeds 2.5 MB) upload directly to Cloudflare R2
+        const useR2 = file.size > 2 * 1024 * 1024 || (inlineBytes + file.size > 2.5 * 1024 * 1024);
+        if (useR2) {
+          toast(`Uploading ${file.name}…`, [], 15000);
+          try {
+            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+            const key = `mail-attachments/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
+            const upRes = await fetch(`${ASSET_UPLOAD}/${key}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': file.type || 'application/octet-stream' },
+              body: file,
+            });
+            if (!upRes.ok) throw new Error(`Upload failed (${upRes.status})`);
+            st.composeFiles.push({
+              filename: file.name,
+              size: file.size,
+              contentType: file.type || 'application/octet-stream',
+              path: `${ASSET_PUBLIC}/${key}`,
+            });
+            hideToast();
+          } catch (upErr) {
+            totalSize -= file.size;
+            toast('⚠ Attachment upload failed: ' + upErr.message, [], 4500);
+          }
+        } else {
+          inlineBytes += file.size;
+          const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          st.composeFiles.push({
+            filename: file.name,
+            size: file.size,
+            contentType: file.type || 'application/octet-stream',
+            content: base64,
+          });
+        }
       }
       renderComposeFiles();
     }
@@ -1346,13 +1379,17 @@
     }
 
     function queueSend(payload, restoreSnapshot) {
+      if (!payload.idempotencyKey) {
+        payload.idempotencyKey = 'send_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+      }
+
       // Flush any previous pending send immediately first
       if (st.pendingSend) {
         const prev = st.pendingSend;
         clearInterval(st.undoCountdown);
         clearTimeout(st.undoTimer);
         st.pendingSend = null;
-        executeSendNow(prev.payload);
+        executeSendNow(prev.payload, prev.restoreSnapshot);
       }
 
       let secsLeft = 5;
@@ -1378,7 +1415,7 @@
               clearTimeout(st.undoTimer);
               const cur = st.pendingSend;
               st.pendingSend = null;
-              if (cur) executeSendNow(cur.payload);
+              if (cur) executeSendNow(cur.payload, cur.restoreSnapshot);
             },
           },
         ], 0);
@@ -1394,22 +1431,39 @@
         clearInterval(st.undoCountdown);
         const cur = st.pendingSend;
         st.pendingSend = null;
-        if (cur) executeSendNow(cur.payload);
+        if (cur) executeSendNow(cur.payload, cur.restoreSnapshot);
       }, 5000);
     }
 
-    async function executeSendNow(payload) {
-      toast('Sending…', [], 10000);
+    async function executeSendNow(payload, restoreSnapshot) {
+      toast('Sending…', [], 25000);
       try {
-        await api('/api/send', {
-          method: 'POST',
-          body: JSON.stringify(payload),
-        });
+        try {
+          await api('/api/send', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+          });
+        } catch (firstErr) {
+          // Retry once on Safari/WebKit stale keep-alive socket drop ("Load failed" / "Failed to fetch")
+          const isTransportDrop = !firstErr.status || /load failed|failed to fetch|network/i.test(firstErr.message || '');
+          if (!isTransportDrop) throw firstErr;
+          await new Promise((r) => setTimeout(r, 450));
+          await getToken(true).catch(() => {});
+          await api('/api/send', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+          });
+        }
         toast('✓ Message sent');
         loadFolders();
         if (st.folder === 'SENT' || st.folder === 'INBOX') loadMessages(false, true);
       } catch (err) {
-        toast('⚠ Send failed: ' + err.message, [], 5000);
+        if (restoreSnapshot) restoreSnapshot();
+        if (!$('modal').hidden) {
+          $('c-err').textContent = '⚠ Send failed: ' + err.message;
+          $('c-err').hidden = false;
+        }
+        toast('⚠ Send failed: ' + err.message, [], 5500);
       }
     }
 
