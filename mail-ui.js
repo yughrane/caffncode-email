@@ -397,7 +397,7 @@
       $('msg').hidden = false;
       cm.classList.add('cm-reading');
       $('subj').textContent = cached?.subject || 'Loading…';
-      $('frame').srcdoc = '<p style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#999;padding:16px">Loading…</p>';
+      $('frame').srcdoc = `<p style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#999;padding:16px">Loading…</p>`;
 
       try {
         const { message: m } = await api(`/api/message?id=${encodeURIComponent(id)}`);
