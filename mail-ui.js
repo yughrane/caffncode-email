@@ -172,6 +172,7 @@
     injectCss();
     const apiBase = (opts.apiBase || '').replace(/\/$/, '');
     const getToken = opts.getToken;
+    const onUnauthorized = opts.onUnauthorized;
     const st = { folder: 'INBOX', msgs: [], pageToken: '', hasMore: false, current: null, mailbox: '', displayName: '', readIds: new Set() };
 
     function getReadStorageKey() {
@@ -281,16 +282,25 @@
       toastT = setTimeout(() => t.classList.remove('show'), 2800);
     }
 
-    async function api(path, options = {}) {
-      const token = await getToken();
-      if (!token) throw new Error('Not signed in');
+    async function api(path, options = {}, _retried = false) {
+      const token = await getToken(_retried);
+      if (!token) {
+        if (onUnauthorized) onUnauthorized();
+        const e = new Error('Session expired. Please sign in again.');
+        e.status = 401;
+        throw e;
+      }
       const res = await fetch(apiBase + path, {
         ...options,
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...(options.headers || {}) },
       });
+      if (res.status === 401 && !_retried) {
+        return api(path, options, true);
+      }
       let data = {};
       try { data = await res.json(); } catch { /* ignore */ }
       if (!res.ok || data.success === false) {
+        if (res.status === 401 && onUnauthorized) onUnauthorized();
         const e = new Error(data.error || `Request failed (${res.status})`);
         e.status = res.status;
         throw e;
@@ -314,6 +324,10 @@
         });
         return true;
       } catch (err) {
+        if (err.status === 401) {
+          $('items').innerHTML = `<div class="cm-state err">🔒 Session expired. Signing out…</div>`;
+          return false;
+        }
         if (err.status === 403) {
           $('items').innerHTML = `<div class="cm-state err">📭 ${esc(err.message)}</div>`;
           $('mailbox').textContent = 'not assigned';

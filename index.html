@@ -141,18 +141,119 @@
 <script>
   const SUPABASE_URL = 'https://qjcnqslvoseyaabjjvkn.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_01TSfCXJMwGFVt2PxJQvSA_n8eL2zn7';
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  let mailApp = null;
+  const AUTH_STORAGE_KEY = 'sb-qjcnqslvoseyaabjjvkn-auth-token';
 
-  async function getToken() {
-    const { data: { session } } = await sb.auth.getSession();
+  // Shared .caffncode.com cookie + localStorage storage so admin & email share one SSO session without rotating each other's refresh tokens
+  const sharedAuthStorage = (() => {
+    const isCaffnCode = /(^|\.)caffncode\.com$/i.test(location.hostname);
+    const CHUNK_SIZE = 2800;
+    function readCookieMap() {
+      const map = {};
+      (document.cookie || '').split(';').forEach(pair => {
+        const idx = pair.indexOf('=');
+        if (idx > 0) map[pair.slice(0, idx).trim()] = pair.slice(idx + 1).trim();
+      });
+      return map;
+    }
+    function setCookie(name, val, maxAge) {
+      const domainAttr = isCaffnCode ? '; Domain=.caffncode.com' : '';
+      const secureAttr = location.protocol === 'https:' ? '; Secure' : '';
+      document.cookie = `${name}=${val}; Path=/${domainAttr}; Max-Age=${maxAge}; SameSite=Lax${secureAttr}`;
+    }
+    return {
+      getItem(key) {
+        if (isCaffnCode) {
+          const map = readCookieMap();
+          if (map[`${key}.0`] !== undefined) {
+            let combined = '';
+            for (let i = 0; map[`${key}.${i}`] !== undefined; i++) combined += map[`${key}.${i}`];
+            try { return decodeURIComponent(combined); } catch {}
+          } else if (map[key] !== undefined) {
+            try { return decodeURIComponent(map[key]); } catch {}
+          }
+        }
+        try { return localStorage.getItem(key); } catch { return null; }
+      },
+      setItem(key, value) {
+        try { localStorage.setItem(key, value); } catch {}
+        if (isCaffnCode) {
+          const enc = encodeURIComponent(value);
+          const chunks = Math.ceil(enc.length / CHUNK_SIZE) || 1;
+          for (let i = 0; i < chunks; i++) {
+            setCookie(`${key}.${i}`, enc.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE), 31536000);
+          }
+          const map = readCookieMap();
+          for (let i = chunks; map[`${key}.${i}`] !== undefined; i++) {
+            setCookie(`${key}.${i}`, '', 0);
+          }
+        }
+      },
+      removeItem(key) {
+        try { localStorage.removeItem(key); } catch {}
+        if (isCaffnCode) {
+          setCookie(key, '', 0);
+          const map = readCookieMap();
+          for (let i = 0; map[`${key}.${i}`] !== undefined || i < 6; i++) {
+            setCookie(`${key}.${i}`, '', 0);
+          }
+        }
+      },
+    };
+  })();
+
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: {
+      storageKey: AUTH_STORAGE_KEY,
+      storage: sharedAuthStorage,
+      detectSessionInUrl: false,
+    },
+  });
+  let mailApp = null;
+  let handlingExpired = false;
+
+  async function getToken(forceRefresh = false) {
+    const nowSec = Math.floor(Date.now() / 1000);
+    let { data: { session } } = await sb.auth.getSession();
+    const isExpiring = session?.expires_at && (session.expires_at - nowSec < 60);
+
+    // Check if another .caffncode.com tab already rotated & saved a fresher token in the shared cookie
+    if (forceRefresh || !session?.access_token || isExpiring) {
+      try {
+        const raw = sharedAuthStorage.getItem(AUTH_STORAGE_KEY);
+        const stored = raw ? JSON.parse(raw) : null;
+        if (stored?.access_token && stored?.expires_at > nowSec + 60 && stored.access_token !== session?.access_token) {
+          return stored.access_token;
+        }
+      } catch {}
+
+      const { data, error } = await sb.auth.refreshSession();
+      if (!error && data?.session) {
+        session = data.session;
+      } else if (forceRefresh || isExpiring) {
+        return '';
+      }
+    }
     return session?.access_token || '';
   }
 
-  function showLogin() {
+  async function handleSessionExpired() {
+    if (handlingExpired) return;
+    handlingExpired = true;
+    try { await sb.auth.signOut({ scope: 'local' }); } catch {}
+    sharedAuthStorage.removeItem(AUTH_STORAGE_KEY);
+    showLogin('Your session expired. Please sign in again.');
+    handlingExpired = false;
+  }
+
+  function showLogin(msg = '') {
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('mail-app').style.display = 'none';
     if (mailApp) { mailApp.destroy(); mailApp = null; }
+    const err = document.getElementById('login-error');
+    if (msg && err) {
+      err.textContent = '⚠ ' + msg;
+      err.classList.add('show');
+    }
   }
 
   async function showApp(session) {
@@ -164,7 +265,13 @@
       name = data?.display_name || data?.username || name;
     } catch {}
     document.getElementById('nav-username').textContent = name;
-    if (!mailApp) mailApp = CaffnMail.mount(document.getElementById('mail-root'), { apiBase: '', getToken });
+    if (!mailApp) {
+      mailApp = CaffnMail.mount(document.getElementById('mail-root'), {
+        apiBase: '',
+        getToken,
+        onUnauthorized: handleSessionExpired,
+      });
+    }
   }
 
   async function login(e) {
@@ -217,11 +324,22 @@
       }
     }
 
-    const { data: { session } } = await sb.auth.getSession();
-    if (session) showApp(session); else showLogin();
+    const token = await getToken();
+    if (token) {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) await showApp(session);
+      else await handleSessionExpired();
+    } else {
+      const { data: { session: stale } } = await sb.auth.getSession();
+      if (stale) await handleSessionExpired();
+      else showLogin();
+    }
     sb.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') showLogin();
       else if (session && !mailApp) showApp(session);
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && mailApp) getToken().catch(() => {});
     });
   });
 </script>
