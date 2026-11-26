@@ -13,19 +13,18 @@ export default async function handler(req, res) {
     const { user, email, displayName } = await verifyUser(req);
 
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
-    const { to, subject, html, text, cc, bcc } = body;
+    const { to, subject, html, text, cc, bcc, attachments, inReplyTo, references } = body;
 
     if (!to || (!Array.isArray(to) && typeof to !== 'string')) {
       return res.status(400).json({ success: false, error: 'Recipient "to" is required' });
     }
 
-    // Format recipient list
     const parseRecipients = (input) => {
       if (!input) return [];
       const list = Array.isArray(input) ? input : String(input).split(/[,;]/);
       return list
         .map(item => {
-          if (typeof item === 'object' && item.mail_address) return item.mail_address;
+          if (typeof item === 'object' && item) return item.mail_address || item.email || '';
           const str = String(item).trim();
           const match = str.match(/^(?:(.*)<)?([^>]+)>?$/);
           return (match ? match[2] : str).trim();
@@ -42,10 +41,41 @@ export default async function handler(req, res) {
     }
 
     const htmlContent = html || (text ? `<div style="white-space: pre-wrap; font-family: sans-serif;">${text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : '<div></div>');
-    const textContent = text || (html ? html.replace(/<[^>]+>/g, '') : '');
+    const textContent = text || (html ? html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n').replace(/<[^>]+>/g, '') : '');
     const senderName = displayName || (email.split('@')[0]);
 
-    // Send email via Resend (verified domain caffncode.com)
+    // Format attachments for Resend: [{ filename, content (base64), content_type }]
+    const resendAttachments = Array.isArray(attachments)
+      ? attachments
+          .filter(a => a && a.filename && a.content)
+          .map(a => ({
+            filename: String(a.filename),
+            content: String(a.content).replace(/^data:[^;]+;base64,/, ''),
+            ...(a.contentType ? { content_type: String(a.contentType) } : {}),
+          }))
+      : [];
+
+    // Threading headers for replies
+    const customHeaders = {};
+    if (inReplyTo) {
+      const cleanReplyId = String(inReplyTo).startsWith('<') ? String(inReplyTo) : `<${inReplyTo}>`;
+      customHeaders['In-Reply-To'] = cleanReplyId;
+      customHeaders['References'] = references ? `${references} ${cleanReplyId}` : cleanReplyId;
+    }
+
+    const payload = {
+      from: `${senderName} <${email}>`,
+      to: toList,
+      cc: ccList.length ? ccList : undefined,
+      bcc: bccList.length ? bccList : undefined,
+      reply_to: email,
+      subject: subject || '(no subject)',
+      html: htmlContent,
+      text: textContent,
+      attachments: resendAttachments.length ? resendAttachments : undefined,
+      headers: Object.keys(customHeaders).length ? customHeaders : undefined,
+    };
+
     const resendRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -53,16 +83,7 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json',
         'User-Agent': 'CaffnCode/1.0',
       },
-      body: JSON.stringify({
-        from: `${senderName} <${email}>`,
-        to: toList,
-        cc: ccList.length ? ccList : undefined,
-        bcc: bccList.length ? bccList : undefined,
-        reply_to: email,
-        subject: subject || '(no subject)',
-        html: htmlContent,
-        text: textContent,
-      }),
+      body: JSON.stringify(payload),
     });
 
     const resendData = await resendRes.json();

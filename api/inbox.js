@@ -12,12 +12,13 @@ export default async function handler(req, res) {
     const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
 
     const folder = (req.query.folder || 'INBOX').toUpperCase();
+    const onlyUnread = req.query.only_unread === 'true' || req.query.only_unread === '1';
     const pageSize = Math.min(Math.max(parseInt(req.query.page_size || '20', 10), 1), 20);
     const pageToken = req.query.page_token || '';
 
-    // If viewing SENT folder, include sent emails from Supabase
+    // If viewing SENT folder (and not filtering unread), include sent emails from Supabase
     let sentDbMessages = [];
-    if (folder === 'SENT' && !pageToken) {
+    if (folder === 'SENT' && !pageToken && !onlyUnread) {
       try {
         const sRes = await fetch(`${SUPABASE_URL}/rest/v1/sent_emails?user_id=eq.${user.id}&order=created_at.desc&limit=20`, {
           headers: { Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY }
@@ -29,12 +30,15 @@ export default async function handler(req, res) {
             threadId: s.id,
             subject: s.subject || '(no subject)',
             from: { name: s.from_name || '', email: s.from_email || '' },
-            to: (s.to_recipients || []).map(r => typeof r === 'string' ? { email: r } : r),
+            to: (s.to_recipients || []).map(r => typeof r === 'string' ? { name: '', email: r } : r),
+            cc: (s.cc_recipients || []).map(r => typeof r === 'string' ? { name: '', email: r } : r),
             date: new Date(s.created_at).getTime(),
             unread: false,
+            starred: false,
             labels: ['SENT'],
             snippet: (s.body_text || '').slice(0, 140),
             hasAttachments: false,
+            attachmentCount: 0,
           }));
         }
       } catch (err) {
@@ -44,18 +48,25 @@ export default async function handler(req, res) {
 
     const larkToken = await getLarkToken();
 
-    let url = `https://open.larksuite.com/open-apis/mail/v1/user_mailboxes/${encodeURIComponent(email)}/messages?folder_id=${encodeURIComponent(folder)}&page_size=${pageSize}`;
+    let url = `https://open.larksuite.com/open-apis/mail/v1/user_mailboxes/${encodeURIComponent(email)}/messages?page_size=${pageSize}`;
+    if (folder === 'STARRED') {
+      url += `&label_id=FLAGGED`;
+    } else {
+      url += `&folder_id=${encodeURIComponent(folder)}`;
+    }
+    if (onlyUnread) {
+      url += `&only_unread=true`;
+    }
     if (pageToken) {
       url += `&page_token=${encodeURIComponent(pageToken)}`;
     }
 
     const listRes = await fetch(url, {
-      headers: { 'Authorization': `Bearer ${larkToken}` },
+      headers: { 'Authorization': `Bearer ${larkToken}`, 'User-Agent': 'CaffnCode/1.0' },
     });
 
     const listData = await listRes.json();
     if (listData.code !== 0) {
-      // If Lark folder listing failed but we have sent messages from DB, return those
       if (sentDbMessages.length > 0) {
         return res.status(200).json({
           success: true,
@@ -84,12 +95,12 @@ export default async function handler(req, res) {
       });
     }
 
-    // Batch get message details
     const batchRes = await fetch(`https://open.larksuite.com/open-apis/mail/v1/user_mailboxes/${encodeURIComponent(email)}/messages/batch_get`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${larkToken}`,
         'Content-Type': 'application/json',
+        'User-Agent': 'CaffnCode/1.0',
       },
       body: JSON.stringify({ message_ids: messageIds }),
     });
@@ -103,34 +114,42 @@ export default async function handler(req, res) {
     const rawMessages = batchData.data?.messages || [];
 
     const messages = rawMessages.map(m => {
-      let snippet = '';
-      if (m.body_plain_text) {
+      let snippet = m.body_preview || '';
+      if (!snippet && m.body_plain_text) {
         try {
           snippet = Buffer.from(m.body_plain_text, 'base64').toString('utf-8').slice(0, 140);
         } catch {
           snippet = '';
         }
       }
+      const labels = m.label_ids || [];
+      const nonInlineAttachments = (m.attachments || []).filter(a => !a.is_inline);
 
       return {
         id: m.message_id,
-        threadId: m.thread_id,
+        threadId: m.thread_id || m.message_id,
         subject: m.subject || '(no subject)',
         from: {
           name: m.head_from?.name || '',
           email: m.head_from?.mail_address || '',
         },
         to: (m.to || []).map(t => ({ name: t.name || '', email: t.mail_address || '' })),
+        cc: (m.cc || []).map(c => ({ name: c.name || '', email: c.mail_address || '' })),
         date: parseInt(m.internal_date || '0', 10),
-        unread: (m.label_ids || []).includes('UNREAD'),
-        labels: m.label_ids || [],
+        unread: labels.includes('UNREAD'),
+        starred: labels.includes('FLAGGED'),
+        labels,
         snippet,
-        hasAttachments: Array.isArray(m.attachments) && m.attachments.length > 0,
+        hasAttachments: nonInlineAttachments.length > 0,
+        attachmentCount: nonInlineAttachments.length,
       };
     });
 
-    // Merge and sort newest first
-    const allMessages = [...sentDbMessages, ...messages];
+    // Deduplicate if a sent email exists in both Supabase and Lark
+    const seenKeys = new Set(messages.map(m => `${m.subject}|${Math.floor(m.date / 60000)}`));
+    const uniqueSentDb = sentDbMessages.filter(s => !seenKeys.has(`${s.subject}|${Math.floor(s.date / 60000)}`));
+
+    const allMessages = [...uniqueSentDb, ...messages];
     allMessages.sort((a, b) => b.date - a.date);
 
     return res.status(200).json({

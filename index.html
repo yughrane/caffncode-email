@@ -246,6 +246,7 @@
   }
 
   function showLogin(msg = '') {
+    document.title = 'Mail · CaffnCode';
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('mail-app').style.display = 'none';
     if (mailApp) { mailApp.destroy(); mailApp = null; }
@@ -270,6 +271,9 @@
         apiBase: '',
         getToken,
         onUnauthorized: handleSessionExpired,
+        onUnreadChange(count) {
+          document.title = count > 0 ? `(${count}) Mail · CaffnCode` : 'Mail · CaffnCode';
+        },
       });
     }
   }
