@@ -41,12 +41,12 @@
   .cm-mailbox strong{display:block;color:var(--cm-caramel);font-size:.52rem;text-transform:uppercase;letter-spacing:.14em}
 
   /* ── Message List Pane ── */
-  .cm-list{border-right:2px solid var(--cm-espresso);display:flex;flex-direction:column;min-height:0;background:var(--cm-cream)}
-  .cm-list-head{display:flex;align-items:center;gap:7px;padding:.8rem .9rem .7rem;border-bottom:1.5px solid var(--cm-espresso);background:var(--cm-foam)}
+  .cm-list{border-right:2px solid var(--cm-espresso);display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden;background:var(--cm-cream)}
+  .cm-list-head{display:flex;align-items:center;gap:5px;padding:.75rem .75rem .65rem;border-bottom:1.5px solid var(--cm-espresso);background:var(--cm-foam);min-width:0}
   .cm-chk-all{width:14px;height:14px;accent-color:var(--cm-caramel);cursor:pointer;flex-shrink:0}
-  .cm-list-title{font-family:'Inter Tight', 'Helvetica Neue', Helvetica, Arial, sans-serif;font-weight:900;font-size:1.05rem;letter-spacing:-.03em}
-  .cm-count{font-size:.58rem;background:var(--cm-latte);padding:2px 7px;font-weight:700}
-  .cm-btn.cm-mark-all{padding:3px 7px;font-size:.54rem;white-space:nowrap;margin-left:auto;display:inline-flex;align-items:center;gap:3px;box-shadow:1px 1px 0 var(--cm-latte)}
+  .cm-list-title{font-family:'Inter Tight', 'Helvetica Neue', Helvetica, Arial, sans-serif;font-weight:900;font-size:1rem;letter-spacing:-.03em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cm-count{font-size:.56rem;background:var(--cm-latte);padding:2px 6px;font-weight:700;flex-shrink:0}
+  .cm-btn.cm-mark-all{padding:3px 6px;font-size:.52rem;white-space:nowrap;margin-left:auto;display:inline-flex;align-items:center;gap:3px;box-shadow:1px 1px 0 var(--cm-latte);flex-shrink:0}
   .cm-icon-btn{background:transparent;border:2px solid var(--cm-espresso);width:28px;height:28px;cursor:pointer;font-size:.8rem;
       display:inline-flex;align-items:center;justify-content:center;box-shadow:2px 2px 0 var(--cm-latte);transition:all .12s;color:var(--cm-espresso);flex-shrink:0}
   .cm-icon-btn:hover{transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--cm-caramel)}
@@ -149,9 +149,9 @@
   /* Inline Quick Reply */
   .cm-qreply{border-top:2px solid var(--cm-espresso);background:var(--cm-foam);padding:.65rem 1.1rem;flex-shrink:0}
   .cm-qreply-row{display:flex;gap:8px;align-items:flex-end}
-  .cm-qreply textarea{flex:1;border:1.5px solid var(--cm-espresso);background:#fff;padding:7px 10px;font-size:.74rem;color:var(--cm-espresso);
-      resize:none;height:36px;max-height:120px;outline:none;transition:height .15s,border-color .15s}
-  .cm-qreply textarea:focus{height:68px;border-color:var(--cm-caramel)}
+  .cm-qreply textarea{flex:1;border:1.5px solid var(--cm-espresso);background:#fff;padding:9px 11px;font-size:.74rem;line-height:1.4;color:var(--cm-espresso);
+      resize:none;height:38px;max-height:120px;outline:none;transition:height .15s,border-color .15s}
+  .cm-qreply textarea:focus{height:72px;border-color:var(--cm-caramel)}
 
   /* ── Modals (Compose, Task, Signature, Shortcuts, Preview) ── */
   .cm-modal{position:fixed;inset:0;background:rgba(26,15,7,.58);display:flex;align-items:center;justify-content:center;z-index:10000;padding:1rem}
@@ -388,7 +388,7 @@
             <input type="checkbox" class="cm-chk-all" data-el="chk-all" title="Select all visible"/>
             <span class="cm-list-title" data-el="title">Inbox</span>
             <span class="cm-count" data-el="count">0</span>
-            <button class="cm-btn cm-mark-all" data-act="mark-all-read" title="Mark all messages in this folder as read">✓ Mark all read</button>
+            <button class="cm-btn cm-mark-all" data-act="mark-all-read" title="Mark all messages in this folder as read">✓ Read all</button>
             <button class="cm-icon-btn" data-act="compose-mini" title="Compose (c)">✎</button>
             <button class="cm-icon-btn" data-act="refresh" title="Refresh">↻</button>
           </div>
@@ -449,7 +449,7 @@
 
             <div class="cm-qreply" data-el="qreply">
               <div class="cm-qreply-row">
-                <textarea data-el="qr-body" placeholder="Write a quick reply… (Cmd+Enter to send)"></textarea>
+                <textarea data-el="qr-body" placeholder="Quick reply… (⌘+Enter)"></textarea>
                 <button type="button" class="cm-btn" data-act="qr-popout" title="Open in full editor">⤢ Full</button>
                 <button type="button" class="cm-send" data-act="qr-send" style="padding:8px 14px">Reply ↗</button>
               </div>
@@ -1000,7 +1000,7 @@
       cm.classList.add('cm-reading');
       $('subj').textContent = cached?.subject || 'Loading…';
       $('qr-body').value = '';
-      $('qr-body').placeholder = `Reply to ${cached?.from?.name || cached?.from?.email || 'sender'}… (Cmd+Enter to send)`;
+      $('qr-body').placeholder = `Reply to ${cached?.from?.name || cached?.from?.email || 'sender'}… (⌘+Enter)`;
       $('thread-scroll').innerHTML = `<div class="cm-state">Loading message…</div>`;
 
       try {
@@ -1013,7 +1013,7 @@
         st.threadMsgs = list;
         harvestContactsFromMessages(list);
         $('subj').textContent = m.subject || '(no subject)';
-        $('qr-body').placeholder = `Reply to ${m.from?.name || m.from?.email || 'sender'}… (Cmd+Enter to send)`;
+        $('qr-body').placeholder = `Reply to ${m.from?.name || m.from?.email || 'sender'}… (⌘+Enter)`;
         syncReadingActionButtons();
         renderThreadCards(list, false);
       } catch (err) {
